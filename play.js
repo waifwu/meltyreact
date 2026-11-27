@@ -49,7 +49,7 @@ import { createPause } from './lib/pause.js';
 import { setupFullscreen, fullscreenAvailable } from './lib/fullscreen.js';
 import { attachTouchControls, isPhoneLike } from './lib/touch-controls.js';
 import { portStartAppCfg, encodeCfgCfg, firstStartCfgBody, newSeed } from './lib/gamecfg.js';
-import { load as loadControls, keysOf, keyLabel, DIK, CHANNEL as CONTROLS_CHANNEL, STORAGE_KEY as CONTROLS_KEY } from './lib/controls-model.js';
+import { load as loadControls, keysOf, keyLabel, DIK, PAGE_PAUSE, CHANNEL as CONTROLS_CHANNEL, STORAGE_KEY as CONTROLS_KEY } from './lib/controls-model.js';
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -279,6 +279,10 @@ function showKeys() {
       if (!code) continue;
       const t = document.createElement('span');
       t.textContent = what;
+      if (what === 'Pause') { // Resume while the page holds the game (wireMobileUi pagePause)
+        t.id = 'pause-what';
+        if (document.body.classList.contains('page-paused')) t.textContent = 'Resume';
+      }
       note.append(keycap(code), t);
     }
     if (prefs.mouse) {
@@ -993,6 +997,39 @@ function gamePauseState(host) {
   return h[GAME_PAUSE_FLAG] === 1;
 }
 
+const PAUSE_CHECK_MS = 250; // after a press of Pause: the game's own flag was set within 50 ms at 60 fps (the phone's button holds the key 75 ms)
+
+// The Pause key (Esc unless Controls says otherwise) pauses wherever the phone's Pause button
+// does. The game takes the key itself (lib/controls-model.js pageRuntimeText) and answers it in
+// an Arcade fight and in Training only; in a VS fight and in the menus nothing happened. So, as
+// for that button (wireMobileUi): where the game has not paused itself a quarter of a second
+// after the press, the page holds the game (lib/pause.js), and the next press lets it go on.
+// That second press does not reach the game. With a page open over the game (Settings, Controls,
+// the Menu) the key is theirs.
+function wireKeyboardPause({ pagePause, pageHeld, gamePaused }) {
+  let check = 0;
+  window.addEventListener('keydown', (e) => {
+    if (!e.isTrusted || e.repeat || e.ctrlKey || e.altKey || e.metaKey) return;
+    let c;
+    try { c = loadControls(); } catch { return; }
+    // the keys the game has as Pause: those of Controls, and Esc as well while no action has it
+    const escToo = e.code === PAGE_PAUSE && !Object.values(c.keys).some((ks) => Array.isArray(ks) && ks.includes(PAGE_PAUSE));
+    if (!keysOf(c, 'PAUSE').includes(e.code) && !escToo) return;
+    if (document.querySelector('dialog[open]') || document.body.classList.contains('ended')) return;
+    clearTimeout(check);
+    if (pageHeld()) {
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      pagePause(false);
+      return;
+    }
+    if (gamePaused() !== false) return; // the game's own menu is open (this press closes it), or no flag to read yet
+    check = setTimeout(() => {
+      if (gamePaused() === false && !document.querySelector('dialog[open]')) pagePause(true);
+    }, PAUSE_CHECK_MS);
+  }, true);
+}
+
 // Wire the phone HUD pills, rotate hint, and Menu drawer
 function wireMobileUi({ touch, pages, fullscreen, pause, gamePaused = () => null }) {
   // The Pause button presses the game's Pause key (lib/touch-controls.js triggerPause). The game
@@ -1006,24 +1043,41 @@ function wireMobileUi({ touch, pages, fullscreen, pause, gamePaused = () => null
   // size (the phone turned, the browser's bar going) is cleared with no frame coming to fill it:
   // one frame is let through then (pause.step), so the picture is drawn at its new size.
   const pauseBtn = $('mob-pause');
-  const PAUSE_CHECK_MS = 250; // the key is held 75 ms; the flag was set within 50 ms at 60 fps
-  let pageHolds = false, pauseCheck = 0, statusWas = '';
+  let pageHolds = false, pauseCheck = 0, statusWas = '', deskWas = '', note = null;
   const pagePause = (on) => {
     if (!pause || !pauseBtn || on === pageHolds) return;
     pageHolds = on;
     pauseBtn.textContent = on ? 'Resume' : 'Pause';
     pauseBtn.setAttribute('aria-label', on ? 'Resume game' : 'Pause game');
     pauseBtn.classList.toggle('waiting', on);
-    const st = $('mob-status'), pill = $('mob-fps');
+    // The desktop layout has no button for it (the Pause key does this there, wireKeyboardPause):
+    // its status line, the row under player 1's keys and a note over the picture say so.
+    document.body.classList.toggle('page-paused', on);
+    const what = $('pause-what');
+    if (what) what.textContent = on ? 'Resume' : 'Pause';
+    const st = $('mob-status'), pill = $('mob-fps'), desk = $('status'), lbl = $('status-lbl');
     if (on) {
       touch.releaseAll();
       pause.hold();
       // no frame, so no frame rate: say that the game waits (the next frame rate replaces it)
       if (st) { statusWas = st.textContent; st.textContent = 'Paused'; }
       if (pill) pill.dataset.state = 'stop';
+      if (desk) { deskWas = desk.textContent; desk.textContent = 'Paused'; if (lbl) lbl.textContent = 'Status'; }
+      if (!document.body.classList.contains('mobile')) {
+        let key = null;
+        try { key = keysOf(loadControls(), 'PAUSE')[0] || null; } catch { key = null; }
+        note = document.createElement('p');
+        note.setAttribute('role', 'status');
+        note.textContent = key ? `Paused · ${keyLabel(key)} resumes` : 'Paused';
+        note.style.cssText = 'align-self:center;justify-self:center;z-index:5;margin:0;padding:.45em 1.3em;border-radius:999px;'
+          + 'background:rgb(0 0 0 / .72);box-shadow:0 0 0 1px rgb(255 255 255 / .28);color:#fff;font:italic 1.3rem/1.3 var(--mb-serif, serif);pointer-events:none;';
+        $('screen').append(note);
+      }
     } else {
       if (st && st.textContent === 'Paused') st.textContent = statusWas;
       if (pill) pill.dataset.state = 'live';
+      if (desk && desk.textContent === 'Paused') { desk.textContent = deskWas; if (lbl && /\bfps\b/.test(deskWas)) lbl.textContent = 'Frame rate'; }
+      if (note) { note.remove(); note = null; }
       pause.release();
     }
   };
@@ -1247,6 +1301,7 @@ function wireMobileUi({ touch, pages, fullscreen, pause, gamePaused = () => null
       fullscreen.layout();
     });
   }
+  return { pagePause, pageHeld: () => pageHolds };
 }
 
 // ------------------------------------------------------------ user-area helpers for unattended runs
@@ -1449,7 +1504,9 @@ async function main() {
     if (prefs.mouse) attachMouse($('canvas')); // optional wheel and clicks for the menus (off by default)
     attachExtraKeys(); // Backspace for "back", Enter for "confirm"
     const touch = attachTouchControls({ onPress: (ts) => host.latency && host.latency.touch(ts) });
-    wireMobileUi({ touch, pages, fullscreen, pause: host.pause, gamePaused: () => gamePauseState(host) });
+    const gamePaused = () => gamePauseState(host);
+    const { pagePause, pageHeld } = wireMobileUi({ touch, pages, fullscreen, pause: host.pause, gamePaused });
+    wireKeyboardPause({ pagePause, pageHeld, gamePaused });
     releaseWakeLock = setupWakeLock();
     fullscreen.layout();
   }
