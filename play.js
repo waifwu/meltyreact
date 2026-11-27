@@ -1384,6 +1384,7 @@ async function main() {
   }
   const fail = async (msg, extra = {}) => {
     show('error', msg);
+    status('Error'); // not "Starting…" with the loading dot for ever
     if (cfg.report) await post(`${cfg.report}/__done`, JSON.stringify({ failed: true, message: msg.replace(/<[^>]+>/g, ''), userAgent: navigator.userAgent, ...extra }), 'application/json').catch(() => {});
   };
 
@@ -1615,7 +1616,16 @@ async function main() {
       });
     }
   } catch (e) {
-    await fail(`The game build could not be started: ${esc(e && e.message || e)}`);
+    const text = String(e && e.message || e);
+    // The build's memory is one fixed block (480 MiB of address space, recompiler/runtime/layout.h)
+    // that the browser sets aside when the build starts. Chrome: "Out of memory: Cannot allocate
+    // Wasm memory for new instance"; Safari: "WebAssembly.Memory doesn't have enough memory";
+    // Firefox: "out of memory" or "too many memory pages".
+    if (/out of memory|allocat|enough memory|memory pages/i.test(text)) {
+      await fail(`The browser could not set aside the memory the game needs (480 MB in one block).<br>Close other tabs and apps, then open this page again in a new tab; on a phone, close the browser completely first. A 32-bit browser or a device with little memory may not manage it at all.<br><small>${esc(text)}</small>`, { outOfMemory: true });
+    } else {
+      await fail(`The game build could not be started: ${esc(text)}`);
+    }
     return;
   }
   timing.buildLoadMs = performance.now() - tb;
@@ -1690,7 +1700,7 @@ async function main() {
     crossOriginIsolated: self.crossOriginIsolated === true,
     devicePixelRatio: window.devicePixelRatio,
     visibility: document.visibilityState,
-    memory: cfg.collect && host.heap ? touchedPages(host.heap.buffer, 0x30000000) : null,
+    memory: cfg.collect && host.heap ? touchedPages(host.heap.buffer, 0x1a000000 /* GUEST_TOP, recompiler/runtime/layout.h */) : null,
     audio: audio.summary(),
     display: fullscreen.gameState, // the game's display mode as last reported by the runtime (lib/fullscreen.js)
     storyPreload, // Story mode's data read ahead into the cache (preloadStoryData)
