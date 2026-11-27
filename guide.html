@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guide</title>
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:,">
+<script>
+  // on a phone, over the game: the game page says so in this page's address (lib/controls-host.js
+  // openPage). Set before the first paint; the page's module finds out for a page opened by itself.
+  if (/[?&]touch=1(?:&|$)/.test(location.search)) document.documentElement.classList.add('phone');
+</script>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  /* the game's look comes from game.css (body.mb); this is the page's own layout.
+     The playing parts of the game's manual (MELTY BLOOD ReACT Manual (English)), rewritten
+     and regrouped; the battle screen picture and the move lists are the manual's own. */
+  html { scroll-behavior: smooth; scroll-padding-top: 12px; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  .toc { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 14px 0 0; }
+  .toc a { padding: 2px 12px 3px; font: italic .92rem/1.3 var(--mb-serif); color: var(--mb-dim); text-decoration: none;
+    background: linear-gradient(#0d0204, #000); border: 1.5px solid rgb(236 230 230 / .7); border-radius: 5px; box-shadow: 0 0 0 1px #000; }
+  .toc a:hover, .toc a:focus-visible { color: #fff; outline: none; text-shadow: 0 0 7px var(--mb-glow);
+    background: linear-gradient(90deg, rgb(170 14 36 / .8), rgb(12 2 4 / .95) 80%); }
+  body.mb section p { max-width: 74ch; }
+  .lead { margin-top: 0; }
+
+  /* an input: directions and buttons (shared classes from game.css) */
+  .in { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 5px; white-space: nowrap;
+    --mb-arr: 14px; --mb-arr-gap: 2px; --mb-tap-gap: 4.5px; --mb-plus: .8rem; --mb-tag: .8rem;
+    --mb-btn: 1.5rem; --mb-btn-fs: .82rem; }
+  .in .mb-btns { display: inline-flex; align-items: center; gap: 3px; }
+  .lede .mb-arr { --mb-arr: 13px; margin: 0 2px; }
+
+  /* the four buttons */
+  .buttons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 14px 0 6px; }
+  .btncard { padding: 12px 12px 10px; background: rgb(0 0 0 / .32); border: 1px solid rgb(236 230 230 / .35); border-radius: 8px; }
+  .btncard .big { margin-bottom: 8px; --mb-btn: 2.4rem; --mb-btn-fs: 1.25rem; --mb-btn-bw: 2px; }
+  .btncard h3 { margin: 0 0 4px; }
+  .btncard p { margin: 0; font-size: .92rem; }
+  /* the players' keys: at the foot of every card, so they line up across the four */
+  .btncard { display: flex; flex-direction: column; }
+  .btncard p.keys { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: auto; padding-top: 12px;
+    font-size: .88rem; font-style: italic; color: var(--mb-dim); }
+  .btncard .keys .pk { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+  body.mb .btncard .keys kbd { display: inline-flex; align-items: center; justify-content: center;
+    min-width: 2em; height: 1.75em; padding: 0 .45em; font: 600 1rem/1 var(--mb-mono); font-style: normal;
+    color: #fff; background: linear-gradient(#24060b, #000); border: 1.5px solid var(--mb-edge); border-radius: 5px;
+    box-shadow: 0 0 0 1px #000, inset 0 -2px 0 rgb(255 255 255 / .08); }
+  body.mb .btncard .keys kbd .mb-arr { --mb-arr: 12px; }
+  @media (max-width: 720px) { .buttons { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+  /* moves: name, input, what it does */
+  table.moves { width: 100%; margin: 6px 0 4px; }
+  table.moves tbody tr { transition: background-color .12s; }
+  table.moves tbody tr:hover { background: linear-gradient(90deg, rgb(160 12 32 / .24), rgb(160 12 32 / .05) 80%, transparent); }
+  table.moves th[scope=row] { width: 11em; font-size: 1rem; color: #fff; text-shadow: 0 0 5px rgb(255 42 70 / .5); }
+  table.moves td.input { width: 14em; }
+  table.moves td { font-size: .95rem; }
+  table.moves td, table.moves th { padding: 8px 10px; vertical-align: middle; }
+  @media (max-width: 720px) {
+    table.moves, table.moves tbody, table.moves tr, table.moves th, table.moves td { display: block; width: auto; }
+    table.moves tr { padding: 6px 0; border-bottom: 1px solid rgb(236 230 230 / .16); }
+    table.moves th, table.moves td { border: 0; padding: 2px 4px; }
+  }
+
+  /* Heat states */
+  .states { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 12px 0 4px; }
+  .state { padding: 12px 14px; border-radius: 8px; background: rgb(0 0 0 / .32); border: 1px solid rgb(236 230 230 / .35); }
+  .state h3 { margin: 0 0 6px; }
+  .state.blue { box-shadow: inset 0 0 24px rgb(80 140 255 / .22); border-color: rgb(140 180 255 / .6); }
+  .state.gold { box-shadow: inset 0 0 24px rgb(255 200 80 / .2); border-color: rgb(255 214 120 / .6); }
+  .state p { margin: 6px 0 0; font-size: .93rem; }
+  @media (max-width: 720px) { .states { grid-template-columns: 1fr; } }
+
+  /* the battle screen */
+  .screen { display: grid; grid-template-columns: minmax(0, 320px) 1fr; gap: 18px; align-items: start; margin-top: 10px; }
+  .screen img { width: 100%; height: auto; border: 2px solid var(--mb-edge); border-radius: 6px; box-shadow: 0 0 0 1px #000; image-rendering: pixelated; }
+  .screen ol { margin: 0; padding-left: 1.6em; }
+  .screen li { margin: 0 0 7px; }
+  .screen li b { color: #fff; }
+  @media (max-width: 720px) { .screen { grid-template-columns: 1fr; } }
+
+  /* game modes */
+  dl.modes { display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; margin: 8px 0 0; }
+  dl.modes dt { font-style: italic; font-weight: 600; color: #fff; }
+  dl.modes dd { margin: 0; }
+  @media (max-width: 720px) { dl.modes { grid-template-columns: 1fr; gap: 2px; } dl.modes dd { margin-bottom: 8px; } }
+
+  /* the motions the move lists draw */
+  .legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px 14px; margin: 10px 0 14px; padding: 0; list-style: none; }
+  .legend li { display: flex; align-items: center; gap: 10px; }
+  .legend svg { flex: none; width: 34px; height: 34px; padding: 3px; background: #000; border: 1.5px solid rgb(236 230 230 / .7); border-radius: 6px; }
+  .legend .what { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: .9rem; color: var(--mb-dim); }
+  .legend .what .in { --mb-arr: 12px; --mb-arr-gap: 1.5px; --mb-tap-gap: 3.5px; }
+  .terms { font-size: .92rem; }
+
+  /* the character picker and the chosen move list */
+  .chars { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 14px; }
+  body.mb .chars button { padding: 2px 10px 3px; font-size: .9rem; color: var(--mb-dim); background: linear-gradient(#0d0204, #000); }
+  body.mb .chars button[aria-pressed="true"] { color: #fff; text-shadow: 0 0 7px var(--mb-glow), 0 0 2px #000;
+    background: linear-gradient(90deg, rgb(170 14 36 / .8), rgb(12 2 4 / .95) 80%); }
+  .movelist { display: block; width: 100%; max-width: 800px; height: auto; aspect-ratio: 800 / 448; margin: 0 auto;
+    border: 2px solid var(--mb-edge); border-radius: 8px; box-shadow: 0 0 0 1px #000, 0 10px 26px rgb(0 0 0 / .5); background: #000; }
+</style>
+<script type="module" src="guide.js"></script>
+</head>
+<body class="mb">
+<svg width="0" height="0" style="position:absolute;pointer-events:none" aria-hidden="true" focusable="false">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4.2" markerHeight="4.2" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#fff"></path>
+    </marker>
+    <symbol id="mb-arr" viewBox="0 0 12 12"><path d="M1.2 4.6 H6.2 V2.3 L11 6 L6.2 9.7 V7.4 H1.2 Z" fill="currentColor"/></symbol>
+  </defs>
+</svg>
+<header>
+  <div class="mb-headrow">
+    <h1>Guide</h1>
+    <span><a id="back" href="./play.html">Play</a> <button id="close" type="button" class="secondary" hidden>Close</button></span>
+  </div>
+  <p class="lede">How to play: the four buttons, the techniques every character shares, the gauges, and each
+  character's special moves. Directions are written for a character facing right: when yours faces left, swap <svg class="mb-arr" style="--r:180deg" aria-label="left"><use href="#mb-arr"/></svg> and <svg class="mb-arr" aria-label="right"><use href="#mb-arr"/></svg>.</p>
+  <nav class="toc" aria-label="Sections">
+    <a href="#buttons">Buttons</a><a href="#moving">Moving</a><a href="#defending">Defending</a><a href="#attacking">Attacking</a>
+    <a href="#heat">Gauge and Heat</a><a href="#screen">Battle screen</a><a href="#modes">Game modes</a><a href="#characters">Characters</a>
+  </nav>
+</header>
+<main>
+
+<section id="buttons" aria-labelledby="buttons-h">
+  <h2 id="buttons-h">Buttons</h2>
+  <p class="lead">One stick (<span class="desk-only">W, A, S, D for player 1</span><span class="phone-only">the pad on the left of the screen</span>) and four buttons<span class="phone-only"> on the right</span>. Pressing directions with the buttons makes the special moves.</p>
+  <div class="buttons">
+    <div class="btncard"><span class="mb-btn a big">A</span><h3>Weak attack</h3><p>The quickest hit. Also confirms in the menus<span class="desk-only">; so does <kbd>Enter</kbd></span>.</p><p class="keys desk-only" data-keys="A"></p></div>
+    <div class="btncard"><span class="mb-btn b big">B</span><h3>Medium attack</h3><p>Between A and C. Also goes back in the menus<span class="desk-only">; so does <kbd>Backspace</kbd></span>.</p><p class="keys desk-only" data-keys="B"></p></div>
+    <div class="btncard"><span class="mb-btn c big">C</span><h3>Strong attack</h3><p>The heaviest hit. Throws up close, and turns special moves into EX moves.</p><p class="keys desk-only" data-keys="C"></p></div>
+    <div class="btncard"><span class="mb-btn d big">D</span><h3>Shield</h3><p>A special guard: press it as an attack arrives to stop it, then strike back.</p><p class="keys desk-only" data-keys="D"></p></div>
+  </div>
+  <p class="help desk-only">A+D, A+B and A+B+C are single keys that press those buttons together, for moves that need two or three at
+  once. Change any key in <a href="./controls.html" data-to="controls">Controls</a>.</p>
+  <p class="help phone-only">A+D, A+B and A+B+C are single buttons that press those together, for moves that need two or three at
+  once: on screen they are under the four buttons, and <em>Touch Controls</em> in the game's Menu chooses which of them show.
+  A connected controller's buttons are set in <a href="./controls.html" data-to="controls">Controls</a>.</p>
+  <p class="help desk-only"><b>Mouse, in the menus (optional, off by default in Settings):</b> over the game, the wheel moves the cursor (a sideways wheel or swipe moves it
+  left and right), a left click is A (confirm), a right click B (back) and a middle click C. After clicking outside the game,
+  the first click on it only brings the focus back.</p>
+</section>
+
+<section id="moving" aria-labelledby="moving-h">
+  <h2 id="moving-h">Moving</h2>
+  <table class="moves"><tbody>
+    <tr><th scope="row">Walk</th><td class="input"><span class="in" aria-label="forward or back"><span class="mb-m" aria-hidden="true"><svg class="mb-arr"><use href="#mb-arr"/></svg></span><span class="mb-conj">or</span><span class="mb-m" aria-hidden="true"><svg class="mb-arr" style="--r:180deg"><use href="#mb-arr"/></svg></span></span></td><td>Forward or back.</td></tr>
+    <tr><th scope="row">Jump</th><td class="input"><span class="in" aria-label="up-back, up, or up-forward"><span class="mb-m tap" aria-hidden="true"><svg class="mb-arr" style="--r:-135deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:-90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:-45deg"><use href="#mb-arr"/></svg></span></span></td><td>Straight up, or toward that side.</td></tr>
+    <tr><th scope="row">Crouch</th><td class="input"><span class="in" aria-label="down"><span class="mb-m" aria-hidden="true"><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg></span></span></td><td>Low attacks and low guard.</td></tr>
+    <tr><th scope="row">Dash, backstep</th><td class="input"><span class="in" aria-label="forward twice or back twice"><span class="mb-m tap" aria-hidden="true"><svg class="mb-arr"><use href="#mb-arr"/></svg><svg class="mb-arr"><use href="#mb-arr"/></svg></span><span class="mb-conj">or</span><span class="mb-m tap" aria-hidden="true"><svg class="mb-arr" style="--r:180deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:180deg"><use href="#mb-arr"/></svg></span></span></td><td>Tap twice to rush in or hop back.</td></tr>
+    <tr><th scope="row">Air dash</th><td class="input"><span class="in" aria-label="forward twice or back twice in the air"><span class="mb-m tap" aria-hidden="true"><svg class="mb-arr"><use href="#mb-arr"/></svg><svg class="mb-arr"><use href="#mb-arr"/></svg></span><span class="mb-conj">or</span><span class="mb-m tap" aria-hidden="true"><svg class="mb-arr" style="--r:180deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:180deg"><use href="#mb-arr"/></svg></span><span class="mb-tag">in the air</span></span></td><td>Dash once in mid-air.</td></tr>
+    <tr><th scope="row">Double jump</th><td class="input"><span class="in" aria-label="up-back, up, or up-forward in the air"><span class="mb-m tap" aria-hidden="true"><svg class="mb-arr" style="--r:-135deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:-90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:-45deg"><use href="#mb-arr"/></svg></span><span class="mb-tag">in the air</span></span></td><td>Jump again in mid-air.</td></tr>
+    <tr><th scope="row">High jump</th><td class="input"><span class="in" aria-label="down-back, down, or down-forward then up-forward"><span class="mb-m tap" aria-hidden="true"><svg class="mb-arr" style="--r:135deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:45deg"><use href="#mb-arr"/></svg></span><span class="mb-conj">then</span><span class="mb-m" aria-hidden="true"><svg class="mb-arr" style="--r:-45deg"><use href="#mb-arr"/></svg></span></span></td><td>Tap down just before jumping to go higher.</td></tr>
+  </tbody></table>
+</section>
+
+<section id="defending" aria-labelledby="defending-h">
+  <h2 id="defending-h">Defending</h2>
+  <table class="moves"><tbody>
+    <tr><th scope="row">Guard</th><td class="input"><span class="in" aria-label="hold back or down-back"><span class="mb-tag">hold</span><span class="mb-m" aria-hidden="true"><svg class="mb-arr" style="--r:180deg"><use href="#mb-arr"/></svg></span><span class="mb-conj">or</span><span class="mb-m" aria-hidden="true"><svg class="mb-arr" style="--r:135deg"><use href="#mb-arr"/></svg></span></span></td><td>Hold away from the attack: standing or crouching. Guarding wears down your Vital Source.</td></tr>
+    <tr><th scope="row">Shield</th><td class="input"><span class="in"><span class="mb-btn d">D</span></span></td><td>Press as the attack arrives to stop it without guarding. Shielding fills your Magic Circuit.</td></tr>
+    <tr><th scope="row">Shield Counter</th><td class="input"><span class="in" aria-label="after a shield, quarter circle forward plus D"><span class="mb-tag">after a shield</span><span class="mb-m" aria-hidden="true"><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:45deg"><use href="#mb-arr"/></svg><svg class="mb-arr"><use href="#mb-arr"/></svg></span><span class="mb-plus" aria-hidden="true">+</span><span class="mb-btn d">D</span></span></td><td>A strong counter-attack; which one depends on whether you stand, crouch or are in the air. Costs a little gauge.</td></tr>
+    <tr><th scope="row">Shield Bunker</th><td class="input"><span class="in" aria-label="quarter circle back plus D"><span class="mb-m" aria-hidden="true"><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:135deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:180deg"><use href="#mb-arr"/></svg></span><span class="mb-plus" aria-hidden="true">+</span><span class="mb-btn d">D</span></span></td><td>Parries an attack and hits back in one move. Normally free; if it's guarded, it can force through for a little gauge.</td></tr>
+    <tr><th scope="row">Aerial Recovery</th><td class="input"><span class="in"><span class="mb-tag">knocked up</span><span class="mb-btns"><span class="mb-btn a">A</span><span class="mb-btn b">B</span><span class="mb-btn c">C</span></span></span></td><td>Press an attack button (with a direction to choose where) to get control back. If you don't, you're defenseless until you land.</td></tr>
+  </tbody></table>
+</section>
+
+<section id="attacking" aria-labelledby="attacking-h">
+  <h2 id="attacking-h">Attacking</h2>
+  <table class="moves"><tbody>
+    <tr><th scope="row">Throw</th><td class="input"><span class="in" aria-label="close, forward or back plus C"><span class="mb-tag">close</span><span class="mb-m" aria-hidden="true"><svg class="mb-arr"><use href="#mb-arr"/></svg></span><span class="mb-conj">or</span><span class="mb-m" aria-hidden="true"><svg class="mb-arr" style="--r:180deg"><use href="#mb-arr"/></svg></span><span class="mb-plus" aria-hidden="true">+</span><span class="mb-btn c">C</span></span></td><td>Grabs the opponent, even one who is guarding. Some characters can also throw in the air.</td></tr>
+    <tr><th scope="row">Blowback Edge</th><td class="input"><span class="in"><span class="mb-tag">hold</span><span class="mb-btns"><span class="mb-btn a">A</span><span class="mb-btn b">B</span><span class="mb-btn c">C</span></span></span></td><td>Hold an attack button to charge it. Some characters' charged attacks can't be guarded.</td></tr>
+    <tr><th scope="row">Special moves</th><td class="input"><span class="in"><span class="mb-tag">motion</span><span class="mb-plus" aria-hidden="true">+</span><span class="mb-btns"><span class="mb-btn a">A</span><span class="mb-btn b">B</span><span class="mb-btn c">C</span></span></span></td><td>Each character's own; see <a href="#characters">Characters</a>.</td></tr>
+    <tr><th scope="row">EX moves</th><td class="input"><span class="in"><span class="mb-tag">special</span><span class="mb-plus" aria-hidden="true">+</span><span class="mb-btn c">C</span></span></td><td>A stronger version for 100% of the gauge. With less than 100%, C does the normal (B) version. Not every special has one.</td></tr>
+    <tr><th scope="row">Arc Drive</th><td class="input"><span class="in" aria-label="half circle forward plus C"><span class="mb-m" aria-hidden="true"><svg class="mb-arr" style="--r:180deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:135deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:45deg"><use href="#mb-arr"/></svg><svg class="mb-arr"><use href="#mb-arr"/></svg></span><span class="mb-plus" aria-hidden="true">+</span><span class="mb-btn c">C</span></span></td><td>Each character's super move, with 300% of the gauge or in Heat. In Blood Heat it becomes a stronger version.</td></tr>
+    <tr><th scope="row">Last Arc</th><td class="input"><span class="in"><span class="mb-tag">Blood Heat</span><span class="mb-plus" aria-hidden="true">+</span><span class="mb-btn d">D</span><span class="mb-conj">shield</span></span></td><td>In Blood Heat, after the right shield, each character can unleash their strongest move.</td></tr>
+  </tbody></table>
+</section>
+
+<section id="heat" aria-labelledby="heat-h">
+  <h2 id="heat-h">Gauge and Heat</h2>
+  <p class="lead"><b>Magic Circuit</b>, the gauge at the bottom of the screen, goes up to 300%. It fills as you hit your opponent
+  and as you shield their attacks, and it pays for EX moves, Heat and Arc Drives.</p>
+  <div class="states">
+    <div class="state blue">
+      <h3>Heat <span class="mb-conj">(blue aura)</span></h3>
+      <span class="in" aria-label="down three times plus D with 100 percent"><span class="mb-m tap" aria-hidden="true"><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg></span><span class="mb-plus" aria-hidden="true">+</span><span class="mb-btn d">D</span><span class="mb-tag">with 100%</span></span>
+      <p>You get stronger, can use your Arc Drive, and your health slowly comes back. It also starts by itself when the
+      gauge reaches 300%.</p>
+    </div>
+    <div class="state gold">
+      <h3>Blood Heat <span class="mb-conj">(gold aura)</span></h3>
+      <span class="in" aria-label="in Heat, down three times plus D"><span class="mb-tag">in Heat</span><span class="mb-m tap" aria-hidden="true"><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg></span><span class="mb-plus" aria-hidden="true">+</span><span class="mb-btn d">D</span></span>
+      <p>Stronger still: your Arc Drive becomes its upgraded version, and the Last Arc becomes possible.</p>
+    </div>
+  </div>
+  <p><b>Vital Source</b> shrinks as you take hits and as you guard. It doesn't matter most of the time, but in Heat your
+  health recovers more slowly the lower it is, and not at all once it's empty.</p>
+</section>
+
+<section id="screen" aria-labelledby="screen-h">
+  <h2 id="screen-h">Battle screen</h2>
+  <div class="screen">
+    <img src="guide/battle-screen.gif" width="320" height="240" alt="A fight in progress, with the parts of the screen numbered 1 to 6 as in the list beside it">
+    <ol>
+      <li><b>Frame rate.</b> 60 is normal; it says nothing about the fight itself.</li>
+      <li><b>Rounds won.</b> Two wins take the match, unless Options says otherwise.</li>
+      <li><b>Health.</b> At zero you lose the round. Heat brings some of it back.</li>
+      <li><b>Magic Circuit.</b> Your gauge, 0 to 300%.</li>
+      <li><b>Vital Source.</b> How much health Heat can still restore.</li>
+      <li><b>Combo counter.</b> Hits in a row and the damage they did.</li>
+    </ol>
+  </div>
+</section>
+
+<section id="modes" aria-labelledby="modes-h">
+  <h2 id="modes-h">Game modes</h2>
+  <dl class="modes">
+    <dt>Story Mode</dt><dd>The original MELTY BLOOD story, played with Re·ACT's fighting system.</dd>
+    <dt>Arcade Mode</dt><dd>A run of fights with a story of its own.</dd>
+    <dt>VS Mode</dt><dd>Pick both fighters: against the computer, or player 1 against player 2.</dd>
+    <dt>Training Mode</dt><dd>Practise moves and combos. Pause (<span class="desk-only"><kbd>Esc</kbd></span><span class="phone-only">the button at the top of the screen</span>) opens its practice menu.</dd>
+    <dt>Options</dt><dd>Difficulty, damage, rounds to win, background detail, story retries and text speed, and the music and
+    effects volume.</dd>
+    <dt>Exit Game</dt><dd>Ends the game; <b>Play again</b> starts it once more.</dd>
+  </dl>
+</section>
+
+<section id="characters" aria-labelledby="characters-h">
+  <h2 id="characters-h">Characters</h2>
+  <p class="lead">Each character's special moves and their Arc Drive (the "Triple Gauge Special Move"). The move lists draw the
+  stick motions as curved arrows:</p>
+  <ul class="legend">
+    <li><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M8 4 V16 Q8 26 17 26 Q25 26 25 14" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" marker-end="url(#ah)"></path></svg>
+      <span class="what"><span class="in" aria-label="down, down-forward, forward"><span class="mb-m" aria-hidden="true"><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:45deg"><use href="#mb-arr"/></svg><svg class="mb-arr"><use href="#mb-arr"/></svg></span></span> quarter circle forward</span></li>
+    <li><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24 4 V16 Q24 26 15 26 Q7 26 7 14" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" marker-end="url(#ah)"></path></svg>
+      <span class="what"><span class="in" aria-label="down, down-back, back"><span class="mb-m" aria-hidden="true"><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:135deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:180deg"><use href="#mb-arr"/></svg></span></span> quarter circle back</span></li>
+    <li><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 7 H25 L7 25 H26" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ah)"></path></svg>
+      <span class="what"><span class="in" aria-label="forward, down, down-forward"><span class="mb-m" aria-hidden="true"><svg class="mb-arr"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:45deg"><use href="#mb-arr"/></svg></span></span> forward, then a Z</span></li>
+    <li><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M27 7 H7 L25 25 H6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ah)"></path></svg>
+      <span class="what"><span class="in" aria-label="back, down, down-back"><span class="mb-m" aria-hidden="true"><svg class="mb-arr" style="--r:180deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:135deg"><use href="#mb-arr"/></svg></span></span> back, then a reversed Z</span></li>
+    <li><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M11 4 V24 M21 4 V24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" marker-end="url(#ah)"></path></svg>
+      <span class="what"><span class="in" aria-label="down twice"><span class="mb-m tap" aria-hidden="true"><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg></span></span> down twice</span></li>
+    <li><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 13 Q3 27 16 27 Q29 27 29 12" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" marker-end="url(#ah)"></path></svg>
+      <span class="what"><span class="in" aria-label="half circle forward"><span class="mb-m" aria-hidden="true"><svg class="mb-arr" style="--r:180deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:135deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:45deg"><use href="#mb-arr"/></svg><svg class="mb-arr"><use href="#mb-arr"/></svg></span></span> half circle: Arc Drives</span></li>
+  </ul>
+  <p class="terms">"Attack Button" is any of A, B or C (C for the EX version). <i>Aerial Poss.</i>: can also be done in the air.
+  <i>Chainable</i>: can follow your normal attacks in a combo.</p>
+  <div class="chars" id="chars" role="group" aria-label="Character"></div>
+  <img class="movelist" id="movelist" width="800" height="448" alt="">
+</section>
+
+</main>
+</body>
+</html>

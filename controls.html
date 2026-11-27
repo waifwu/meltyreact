@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Controls</title>
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:,">
+<script>
+  // on a phone, over the game: the game page says so in this page's address (lib/controls-host.js
+  // openPage). Set before the first paint; the page's module finds out for a page opened by itself.
+  if (/[?&]touch=1(?:&|$)/.test(location.search)) document.documentElement.classList.add('phone');
+</script>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  /* the game's look comes from game.css (body.mb); this is the page's own layout */
+  /* Keyboard / Controllers: chosen like a section of the game's Options screen */
+  .tabs { display: flex; gap: 8px; margin: 16px 0 0; }
+  html.phone .tabs #tab-pads { order: -1; } /* a phone: a controller before a keyboard */
+  body.mb .tabs button { color: var(--mb-dim); background: linear-gradient(#0d0204, #000); }
+  body.mb .tabs button[aria-selected="true"] { color: #fff; text-shadow: 0 0 7px var(--mb-glow), 0 0 2px #000;
+    background: linear-gradient(90deg, rgb(170 14 36 / .8), rgb(12 2 4 / .95) 80%); }
+  body.mb #keys { margin-top: 8px; padding-top: 18px; } /* no tab of its own: Keyboard above is its heading */
+  /* each player: a panel with the player as its tab */
+  .players { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 34px 18px; margin-top: 30px; }
+  .players > div { position: relative; padding: 22px 14px 10px; background: rgb(0 0 0 / .35);
+    border: 2px solid var(--mb-edge); border-radius: 9px; box-shadow: 0 0 0 1px #000; }
+  body.mb .players > div > h3:first-child { position: absolute; top: -16px; left: 10px; margin: 0; padding: 1px 14px 3px;
+    background: #060102; border: 2px solid var(--mb-edge); border-radius: 6px; box-shadow: 0 0 0 1px #000; }
+  /* a key or a controller button: a keycap */
+  body.mb .bind { display: inline-flex; align-items: center; gap: 5px; min-width: 9em; padding: 3px 10px; text-align: left;
+    font: 600 .9rem/1.3 var(--mb-mono); font-style: normal;
+    color: #fff; background: linear-gradient(#24060b, #000); border: 1.5px solid var(--mb-edge); border-radius: 5px; }
+  body.mb .bind .mb-arr { --mb-arr: 11px; }
+  body.mb .bind.changed { color: #ffd2d8; text-shadow: 0 0 6px var(--mb-glow); }
+  body.mb .bind.capturing { color: #fff; border-color: #ff8796; animation: mb-call 1.2s ease-in-out infinite; }
+  body.mb .bind.conflict { color: var(--err); border-color: var(--err); }
+  @keyframes mb-call { 50% { box-shadow: 0 0 0 1px #000, 0 0 12px var(--mb-glow); } }
+  @media (prefers-reduced-motion: reduce) { body.mb .bind.capturing { animation: none; box-shadow: 0 0 0 1px #000, 0 0 10px var(--mb-glow); } }
+  body.mb button.small { padding: 2px 9px 3px; font-size: .86rem; }
+  td.act { white-space: nowrap; width: 7em; font-style: italic; color: var(--mb-dim); vertical-align: middle; }
+  td.act .act-in { display: inline-flex; align-items: center; gap: 6px;
+    --mb-arr: 12px; --mb-btn: 1.25rem; --mb-btn-fs: .68rem; --mb-plus: .66rem; }
+  td.act .mb-combo { --mb-btn: 1.12rem; --mb-btn-fs: .62rem; --mb-btn-bw: 1.25px; gap: 2px; }
+  #problems li.error { color: var(--err); }
+  #problems li.warn { color: var(--warn); }
+  .pads li { margin: 2px 0; }
+  .live { font-family: var(--mb-mono); font-size: .85em; }
+  .note { font-size: .92em; }
+  #msg { min-height: 1.5em; margin: 10px 0 0; font-style: italic; }
+  label.inline { display: inline-flex; gap: 6px; align-items: center; }
+  @media (max-width: 520px) {
+    .players > div { padding: 20px 8px 8px; }
+    th, td { padding: 5px 4px; }
+    td.act { width: auto; }
+    body.mb .bind { min-width: 5.5em; padding: 3px 8px; font-size: .84rem; }
+  }
+</style>
+<script type="module" src="lib/controls-page.js"></script>
+</head>
+<body class="mb">
+<svg width="0" height="0" style="position:absolute;pointer-events:none" aria-hidden="true" focusable="false">
+  <symbol id="mb-arr" viewBox="0 0 12 12"><path d="M1.2 4.6 H6.2 V2.3 L11 6 L6.2 9.7 V7.4 H1.2 Z" fill="currentColor"/></symbol>
+</svg>
+<header>
+  <div class="mb-headrow">
+    <h1>Controls</h1>
+    <span><a id="back" href="./play.html">Play</a> <button id="close" type="button" class="secondary" hidden>Close</button></span>
+  </div>
+  <p class="lede desk-only">Keys and controller buttons for both players. Changes are saved at once and reach a running game at its next frame.</p>
+  <p class="lede phone-only">For a controller or a keyboard connected to this device. The on-screen buttons need nothing here: their layout, size and macros are under <em>Touch Controls</em> in the game's Menu. Changes are saved at once.</p>
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" id="tab-keys" aria-selected="true" aria-controls="keys">Keyboard</button>
+    <button type="button" role="tab" id="tab-pads" aria-selected="false" aria-controls="pads">Controllers</button>
+  </div>
+  <p id="msg" class="note" aria-live="polite"></p>
+</header>
+<main>
+  <section id="keys" role="tabpanel" aria-labelledby="tab-keys">
+    <p class="note"><span class="desk-only">Click a key, then press the new key (<kbd>Esc</kbd> or a second click cancels).</span><span class="phone-only">Tap a key, then press the new key on a connected keyboard (a second tap cancels).</span> A key already used elsewhere is swapped with the old one. F5, F11 and F12 stay with the browser. <kbd>Esc</kbd> is always a Pause key here, and never quits the game as it does in the original. The game's own Pause key is F5, and the game allows a pause only in some modes (Training Mode, for one).</p>
+    <div class="players" id="key-players"></div>
+    <table><tbody id="key-global"></tbody></table>
+    <ul id="problems"></ul>
+    <div class="row">
+      <button type="button" class="secondary" id="reset-keys">Reset all keys to defaults</button>
+    </div>
+  </section>
+
+  <section id="pads" role="tabpanel" aria-labelledby="tab-pads" hidden>
+    <h2>Connected controllers</h2>
+    <ul class="pads" id="pad-list"></ul>
+    <p class="note">A browser shows a controller only after one of its buttons has been pressed while this page is open.</p>
+    <div class="players" id="pad-players"></div>
+    <h3>Stick</h3>
+    <div class="row">
+      <label class="inline"><input type="checkbox" id="stick"> The left stick moves as the d-pad does</label>
+      <label class="inline">Dead zone <input type="range" id="deadzone" min="0.1" max="0.9" step="0.05"> <span id="deadzone-v"></span></label>
+    </div>
+    <p class="note">Button assignments are the game's own setting (cfg.cfg, the original launcher's "Controller config"): the game sees the first ten buttons of a controller only. The d-pad, a hat switch and the left stick all move the character; opposite directions pressed together resolve as on the keyboard (down beats up, left beats right).</p>
+    <details>
+      <summary>Settings as a file for the native build (<code>MBR_CONTROLS</code>)</summary>
+      <pre id="text"></pre>
+    </details>
+  </section>
+</main>
+</body>
+</html>

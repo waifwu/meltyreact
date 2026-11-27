@@ -1,0 +1,67 @@
+[hidden] { display: none !important; }
+:root {
+  --bg: #fbfaf8; --fg: #1d1d1f; --muted: #6b6b70; --line: #e2e0dc; --panel: #ffffff;
+  --accent: #3a5bd9; --accent-fg: #fff; --ok: #1f7a3d; --warn: #9a6700; --err: #b42318; --bar: #3a5bd9;
+  --radius: 8px;
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #16171a; --fg: #ececee; --muted: #9b9ba3; --line: #2e3035; --panel: #1e2024;
+    --accent: #7d97ff; --accent-fg: #0b0c10; --ok: #5cc98a; --warn: #e2b04a; --err: #ff7a6b; --bar: #7d97ff; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); }
+header, main { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+header { padding-top: 24px; }
+h1 { font-size: 1.6rem; margin: 0 0 8px; }
+h2 { font-size: 1.15rem; margin: 0 0 8px; }
+h3 { font-size: 1rem; margin: 20px 0 6px; }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; margin: 16px 0; }
+.lede { color: var(--muted); max-width: 70ch; }
+.muted { color: var(--muted); }
+code { font-size: .92em; }
+a { color: var(--accent); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; }
+.row.end { justify-content: flex-end; }
+button, .filebtn {
+  font: inherit; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-fg);
+  padding: 6px 14px; border-radius: 6px; cursor: pointer; display: inline-block;
+}
+button.secondary, .filebtn.secondary { background: transparent; color: var(--accent); }
+button.danger { background: transparent; color: var(--err); border-color: var(--err); }
+#confirm button.danger { background: var(--err); color: #fff; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+.filebtn input { display: none; }
+.drop { border: 2px dashed var(--line); border-radius: var(--radius); padding: 18px; text-align: center; color: var(--muted); }
+.drop.over { border-color: var(--accent); color: var(--accent); }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 600; color: var(--muted); font-size: .9em; }
+td.num { text-align: right; white-space: nowrap; }
+.table-scroll { overflow-x: auto; }
+.st { font-weight: 600; white-space: nowrap; }
+.st.ok { color: var(--ok); } .st.warning { color: var(--warn); } .st.error, .st.missing { color: var(--err); }
+.st.copy, .st.skip, .st.busy { color: var(--accent); }
+td.details { font-size: .88em; color: var(--muted); word-break: break-word; }
+.banner { padding: 8px 12px; border-radius: 6px; border: 1px solid var(--line); }
+.banner.error { border-color: var(--err); color: var(--err); }
+.banner.ok { border-color: var(--ok); color: var(--ok); }
+.warn { color: var(--warn); }
+.notes { font-size: .9em; color: var(--muted); padding-left: 18px; }
+progress { width: 100%; height: 10px; accent-color: var(--bar); }
+#progress label { display: block; margin: 8px 0; font-size: .92em; }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 6px 0; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; }
+pre { max-height: 360px; overflow: auto; font-size: .85em; background: var(--bg); padding: 8px; border-radius: 6px; }
+dialog { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--fg); max-width: 480px; }
+dialog::backdrop { background: rgb(0 0 0 / .4); }
+/* a menu is as wide as its longest choice; on a phone that widened the Settings page past the
+   screen (min-width: 0 also lets the grid track it sits in shrink below that choice) */
+select { max-width: 100%; min-width: 0; }
+/* narrow screens: the import page's file table drops its "Expected size" column. Only that
+   table: on every other table the second column is the point (the key buttons in Controls,
+   the 16-bit column in Settings). */
+@media (max-width: 640px) {
+  #files th:nth-child(2), #files td:nth-child(2) { display: none; }
+}

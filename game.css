@@ -1,0 +1,188 @@
+/* The look of the game's own screens, shared by the game page (play.html), the settings page
+   and the controls page; load it after style.css. A crimson backdrop as on the title screen,
+   black panels with a thin white border and a tab for a heading as on its Options screen,
+   italic serif menu text that glows red when chosen.
+
+   Everyone gets the colours, the backdrop and the named classes (.panel, .tab). Pages whose
+   body has class "mb" (settings, controls) also get style.css's plain elements restyled:
+   headings, sections, buttons, form controls, tables, banners, dialogs. The game page lays out
+   its own elements and does not use that part. */
+
+:root {
+  color-scheme: dark;
+  --mb-serif: "Palatino Linotype", Palatino, "Book Antiqua", "URW Palladio L", Georgia, serif;
+  --mb-sans: Futura, "Century Gothic", "Avenir Next", "Segoe UI", sans-serif;
+  --mb-mono: "MS Gothic", "Osaka-Mono", Menlo, Consolas, monospace;
+  --mb-ink: #f6f0f0; --mb-dim: #c9b3b6; --mb-glow: #ff2a46; --mb-edge: rgb(236 230 230 / .88);
+  --mb-panel: rgb(6 1 2 / .66);
+  /* style.css's colours, for what the pages share with it */
+  --bg: #120306; --fg: var(--mb-ink); --muted: var(--mb-dim); --line: rgb(236 230 230 / .3); --panel: var(--mb-panel);
+  --accent: #ff9aa8; --accent-fg: #fff; --ok: #8fe0a8; --warn: #f2c46b; --err: #ff8f8f; --bar: #e0283f;
+}
+html { background: #0d0204; }
+/* The backdrop stays put while the page scrolls. It is a fixed layer of its own, not a
+   `background-attachment: fixed` background: that one makes the browser repaint the whole
+   window at every step of a scroll, on the main thread, which the game shares with the pages
+   shown over it (the popups scrolled in jerks behind each game frame). As a layer of its own
+   it is drawn once and the page scrolls on the graphics card. */
+body { color: var(--mb-ink); background: transparent; }
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; will-change: transform;
+  background:
+    linear-gradient(116deg, transparent 0 30%, rgb(255 170 180 / .07) 40%, transparent 50%),
+    linear-gradient(64deg, transparent 0 58%, rgb(255 170 180 / .05) 66%, transparent 74%),
+    linear-gradient(180deg, transparent 55%, rgb(10 1 3 / .55)),
+    radial-gradient(ellipse 110% 130% at 50% 30%, #a8182c 0%, #82111f 34%, #4c0914 70%, #1e0408 100%);
+}
+
+/* panels with a tab for a heading */
+.panel { position: relative; margin: 0; padding: 24px 12px 12px; background: var(--mb-panel);
+  border: 2px solid var(--mb-edge); border-radius: 9px;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / .75), inset 0 0 0 1px rgb(0 0 0 / .75), 0 8px 22px rgb(0 0 0 / .45); }
+.panel > .tab { position: absolute; top: -14px; left: 10px; margin: 0; padding: 1px 14px 3px;
+  font: italic 600 1rem/1.25 var(--mb-serif); color: #fff; background: #060102;
+  border: 2px solid var(--mb-edge); border-radius: 6px; box-shadow: 0 0 0 1px #000;
+  text-shadow: 0 0 7px var(--mb-glow), 0 0 2px #000; }
+
+/* fighting-game input notation shared across play.html, guide.html and controls.html:
+   crisp SVG directional arrows (#mb-arr), color-coded glossy A/B/C/D buttons, '+'
+   separators, and dark-glass modifier tags. Size with --mb-arr / --mb-btn / --mb-btn-fs. */
+.mb-m { display: inline-flex; align-items: center; gap: var(--mb-arr-gap, 1.5px); vertical-align: middle; }
+.mb-m.tap { gap: var(--mb-tap-gap, 3.5px); }
+.mb-arr { display: inline-block; flex: none; width: var(--mb-arr, 12px); height: var(--mb-arr, 12px);
+  color: #f8f2f2; vertical-align: middle; transform: rotate(var(--r, 0deg));
+  filter: drop-shadow(0 1px 0 #000); }
+.mb-plus { font: 600 var(--mb-plus, .7rem)/1 var(--mb-sans); color: rgb(236 230 230 / .52);
+  text-shadow: 0 1px 0 #000; }
+.mb-tag { display: inline-block; font: italic 500 var(--mb-tag, .74rem)/1 var(--mb-serif);
+  color: #ebdadd; padding: 2px 5.5px 2.5px; vertical-align: middle;
+  background: rgb(255 255 255 / .06); border: 1px solid rgb(236 230 230 / .18); border-radius: 3px;
+  text-shadow: 0 1px 0 #000; }
+.mb-conj { font: italic 400 .86rem/1.2 var(--mb-serif); color: var(--mb-dim); text-shadow: 0 1px 0 #000; }
+.mb-btn { display: inline-grid; place-items: center; flex: none; vertical-align: middle;
+  width: var(--mb-btn, 1.24rem); height: var(--mb-btn, 1.24rem);
+  font: 700 var(--mb-btn-fs, .68rem)/1 var(--mb-sans); font-style: normal; letter-spacing: 0; color: #fff;
+  text-shadow: 0 1px 1px #000; border-radius: 50%;
+  background: radial-gradient(circle at 38% 30%, #c8223d 0%, #680b19 60%, #1d0206 100%);
+  border: var(--mb-btn-bw, 1.5px) solid rgb(246 238 238 / .9);
+  box-shadow: 0 0 0 1px #000, inset 0 1px 1px rgb(255 210 218 / .35), 0 0 6px rgb(255 42 70 / .3); }
+.mb-btn.a {
+  background: radial-gradient(circle at 38% 30%, #269463 0%, #0e472f 60%, #04150d 100%);
+  border-color: rgb(208 248 228 / .9);
+  box-shadow: 0 0 0 1px #000, inset 0 1px 1px rgb(200 255 228 / .36), 0 0 6px rgb(56 210 140 / .32); }
+.mb-btn.b {
+  background: radial-gradient(circle at 38% 30%, #c98a1c 0%, #634008 60%, #1b1002 100%);
+  border-color: rgb(255 240 205 / .9);
+  box-shadow: 0 0 0 1px #000, inset 0 1px 1px rgb(255 240 200 / .38), 0 0 6px rgb(245 180 55 / .32); }
+.mb-btn.c {
+  background: radial-gradient(circle at 38% 30%, #c8223d 0%, #680b19 60%, #1d0206 100%);
+  border-color: rgb(246 238 238 / .9);
+  box-shadow: 0 0 0 1px #000, inset 0 1px 1px rgb(255 210 218 / .35), 0 0 6px rgb(255 42 70 / .3); }
+.mb-btn.d {
+  background: radial-gradient(circle at 38% 30%, #2d66b8 0%, #112a57 60%, #050c1a 100%);
+  border-color: rgb(210 228 255 / .9);
+  box-shadow: 0 0 0 1px #000, inset 0 1px 1px rgb(200 225 255 / .38), 0 0 6px rgb(70 140 255 / .34); }
+.mb-combo { display: inline-flex; align-items: center; gap: 1.5px; vertical-align: middle; }
+
+/* ------------------------------------------------------------ pages with body.mb */
+body.mb { font-family: var(--mb-serif); font-size: 15px; line-height: 1.5; }
+body.mb header { padding-top: 22px; }
+body.mb main { padding-bottom: 32px; }
+body.mb h1 { margin: 0 0 6px; font: italic 700 2.1rem/1.1 var(--mb-serif); color: #fff;
+  text-shadow: 0 0 10px var(--mb-glow), 0 0 3px var(--mb-glow), 0 2px 0 #000; }
+body.mb h3 { margin: 18px 0 8px; font: italic 600 1.05rem/1.3 var(--mb-serif); color: #fff;
+  text-shadow: 0 0 6px var(--mb-glow), 0 1px 0 #000; }
+body.mb .lede, body.mb .help, body.mb .muted, body.mb .note { color: var(--mb-dim); }
+body.mb .lede { font-style: italic; }
+body.mb a { color: var(--accent); text-underline-offset: 2px; }
+body.mb a:hover { color: #fff; text-shadow: 0 0 6px var(--mb-glow); }
+body.mb code, body.mb kbd, body.mb pre { font-family: var(--mb-mono); }
+body.mb code { color: #ffc2ca; font-size: .88em; }
+body.mb kbd { display: inline-block; min-width: 1.6em; padding: 0 .35em; font-size: .78em; line-height: 1.6;
+  text-align: center; color: #fff; background: linear-gradient(#24060b, #000);
+  border: 1.5px solid var(--mb-edge); border-radius: 4px; box-shadow: 0 0 0 1px #000; }
+body.mb pre { color: var(--mb-ink); background: rgb(0 0 0 / .45); border: 1px solid var(--line); }
+
+/* each section is a panel, its first heading the tab */
+body.mb section { position: relative; margin: 34px 0 18px; padding: 26px 18px 16px; background: var(--mb-panel);
+  border: 2px solid var(--mb-edge); border-radius: 10px;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / .75), inset 0 0 0 1px rgb(0 0 0 / .75), 0 10px 26px rgb(0 0 0 / .45); }
+body.mb section > h2:first-child { position: absolute; top: -16px; left: 14px; margin: 0; padding: 1px 16px 3px;
+  font: italic 600 1.1rem/1.3 var(--mb-serif); color: #fff; background: #060102;
+  border: 2px solid var(--mb-edge); border-radius: 6px; box-shadow: 0 0 0 1px #000;
+  text-shadow: 0 0 7px var(--mb-glow), 0 0 2px #000; }
+body.mb section > h2:not(:first-child) { font: italic 600 1.1rem/1.3 var(--mb-serif); color: #fff; }
+body.mb fieldset { min-width: 0; margin: 12px 0; padding: 8px 14px 12px; border: 1px solid rgb(236 230 230 / .35); border-radius: 8px;
+  background: rgb(0 0 0 / .28); }
+body.mb legend { padding: 0 6px; font: italic 600 1rem/1.3 var(--mb-serif); color: #fff; text-shadow: 0 0 5px var(--mb-glow), 0 1px 0 #000; }
+
+/* buttons: boxed menu items in italic serif that glow red when chosen */
+body.mb button, body.mb .filebtn {
+  font: italic 1rem/1.25 var(--mb-serif); color: #fff; padding: 4px 14px 5px; cursor: pointer;
+  background: linear-gradient(90deg, rgb(150 12 32 / .55), rgb(12 2 4 / .95) 80%);
+  border: 2px solid var(--mb-edge); border-radius: 5px; box-shadow: 0 0 0 1px #000; text-shadow: 0 1px 0 #000;
+  transition: color .12s, text-shadow .12s, background-color .12s; }
+body.mb button.secondary, body.mb .filebtn.secondary { color: var(--mb-dim); background: linear-gradient(#0d0204, #000); }
+body.mb button.danger { color: #ffb0b8; border-color: #ff8f9c; background: linear-gradient(#0d0204, #000); }
+body.mb #confirm button.danger { color: #fff; background: linear-gradient(90deg, rgb(190 16 40 / .85), rgb(60 4 12 / .95)); }
+body.mb button:hover:not(:disabled), body.mb button:focus-visible, body.mb .filebtn:hover, body.mb .filebtn:focus-within {
+  color: #fff; outline: none; text-shadow: 0 0 7px var(--mb-glow), 0 0 2px #000;
+  background: linear-gradient(90deg, rgb(170 14 36 / .8), rgb(12 2 4 / .95) 80%); }
+body.mb button:disabled { opacity: .38; cursor: not-allowed; }
+
+/* form controls */
+body.mb input[type=radio], body.mb input[type=checkbox], body.mb input[type=range] { accent-color: #d8203f; }
+body.mb select, body.mb input[type=number], body.mb input[type=text] {
+  font: .95rem/1.3 var(--mb-serif); color: var(--mb-ink); padding: 3px 8px; background: #0b0204;
+  border: 1.5px solid rgb(236 230 230 / .7); border-radius: 5px; box-shadow: 0 0 0 1px #000; }
+body.mb select:focus-visible, body.mb input:focus-visible { outline: 2px solid var(--mb-glow); outline-offset: 1px; }
+body.mb option { background: #0b0204; color: var(--mb-ink); }
+
+/* tables: label and value rows */
+body.mb table { border-collapse: collapse; }
+body.mb th, body.mb td { border-bottom: 1px solid rgb(236 230 230 / .16); }
+body.mb th { font: italic 600 .95rem/1.3 var(--mb-serif); color: var(--mb-dim); }
+body.mb tbody th { color: var(--mb-ink); font-weight: 400; }
+body.mb .kv dt { font-style: italic; color: var(--mb-dim); }
+body.mb .kv dd { font-family: var(--mb-mono); font-size: .88em; }
+
+/* messages and dialogs */
+body.mb .banner { background: var(--mb-panel); border: 2px solid var(--mb-edge); border-radius: 8px; box-shadow: 0 0 0 1px #000; color: var(--mb-ink); }
+body.mb .banner.ok { border-color: #8fe0a8; color: #d4f5df; }
+body.mb .banner.error { border-color: #ff8f8f; color: #ffd6d6; }
+body.mb dialog { color: var(--mb-ink); background: #0a0203; border: 2px solid var(--mb-edge); border-radius: 10px;
+  box-shadow: 0 0 0 1px #000, 0 18px 50px rgb(0 0 0 / .7); }
+body.mb dialog::backdrop { background: rgb(20 0 4 / .6); }
+body.mb details > summary { cursor: pointer; font-style: italic; color: var(--mb-dim); }
+body.mb details > summary:hover { color: #fff; }
+
+/* Wording and controls for one kind of device only. html.phone: the page is on a phone, or over
+   the game in its phone layout (lib/touch-controls.js isPhoneLike; over the game, the game page
+   says which in the page's address: lib/controls-host.js openPage). */
+html:not(.phone) .phone-only, html.phone .desk-only { display: none !important; }
+
+/* a heading with something on its right (a link, Close) */
+.mb-headrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+/* in a popup over the game (?embedded=1) */
+body.mb.embedded header { padding-top: max(16px, env(safe-area-inset-top)); }
+body.mb.embedded header h1 { font-size: 1.75rem; }
+body.mb.embedded header, body.mb.embedded main {
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+}
+/* a bar at the bottom of a popup, for the buttons that must stay in reach (settings.js) */
+body.mb .popup-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; flex-wrap: wrap;
+  justify-content: flex-end; align-items: center; gap: 8px 10px;
+  padding: 10px max(16px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: linear-gradient(rgb(26 3 7 / .9), rgb(14 2 4 / .98)); border-top: 2px solid var(--mb-edge);
+  box-shadow: 0 -1px 0 #000, 0 -8px 24px rgb(0 0 0 / .5); }
+body.mb .popup-bar .grow { flex: 1; margin: 0; font-style: italic; color: var(--mb-dim); font-size: .9rem; }
+body.mb.has-bar { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+@media (max-width: 640px) {
+  body.mb .mb-headrow button { min-height: 38px; padding: 6px 14px; }
+  body.mb .popup-bar button { min-height: 38px; }
+}
+@media (max-width: 520px) {
+  body.mb header, body.mb main { padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
+  body.mb section { padding: 24px 12px 14px; }
+}

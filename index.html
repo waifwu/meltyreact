@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>MELTY BLOOD Re·ACT</title>
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#1e0408">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Melty Re·ACT">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  /* The canvas in the middle, the title, keys and status in the strip to its left, the page's
+     menu in the strip to its right. Non-touch screens always keep both strips beside the canvas,
+     squeezing the canvas to fit; touch devices switch to the touch-button layout (body.mobile).
+     The colours, the crimson backdrop and the panels come from game.css; this page adds the
+     game's logo, its menu items and the "Information" line of its title screen. */
+  body.play { display: grid; min-height: 100vh; align-items: start;
+    grid-template-columns: minmax(144px, 1fr) auto minmax(144px, 1fr); grid-template-areas: "left stage right"; }
+  #stage { grid-area: stage; align-self: center; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 12px 8px; }
+  #canvas { background: #000; display: block; outline: none;
+    box-shadow: 0 0 0 1px rgb(255 255 255 / .22), 0 0 0 2px #000, 0 10px 40px rgb(0 0 0 / .65); }
+
+  /* the ending screen (play.js showEnding): in the canvas's place and size when the player quits
+     the game from its menu (Exit Game) */
+  #screen { display: grid; }
+  #screen > * { grid-area: 1 / 1; }
+  /* a size container: the canvas gives it its size, and its children size themselves by it (cqi) */
+  #ending { display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-width: 0; min-height: 0; padding: 4%; text-align: center; container-type: size;
+    background:
+      radial-gradient(ellipse 70% 55% at 50% 42%, rgb(170 16 38 / .55), transparent 72%),
+      linear-gradient(116deg, transparent 0 34%, rgb(255 170 180 / .06) 44%, transparent 54%), #080102;
+    box-shadow: 0 0 0 1px rgb(255 255 255 / .22), 0 0 0 2px #000, 0 10px 40px rgb(0 0 0 / .65);
+    animation: mb-ending .9s ease-out both; }
+  .ending-title { margin: 0; font: italic 700 7.5cqi/1.1 var(--mb-serif); color: #fff;
+    text-shadow: 0 0 16px var(--mb-glow), 0 0 5px var(--mb-glow), 0 3px 0 #000; }
+  .ending-game { display: flex; align-items: center; gap: 1.6cqi; margin: 2.6cqi 0 0; font: 400 3.4cqi/1 var(--mb-sans);
+    font-stretch: condensed; letter-spacing: .3em; color: var(--mb-ink); text-shadow: 0 0 4px #000; }
+  .ending-game::before, .ending-game::after { content: ""; width: 8cqi; height: 1px; background: var(--mb-ink); }
+  .ending-sub { font-weight: 600; letter-spacing: .35em; color: #ffb3bd; }
+  #play-again { margin-top: 6cqi; padding: .35em 1.6em .4em; font: italic 3.4cqi/1.2 var(--mb-serif); color: #fff; cursor: pointer;
+    background: linear-gradient(90deg, rgb(160 12 32 / .7), rgb(12 2 4 / .95) 80%); border: 2px solid var(--mb-edge);
+    border-radius: 6px; box-shadow: 0 0 0 1px #000; text-shadow: 0 1px 0 #000; transition: text-shadow .12s, background-color .12s; }
+  #play-again:hover, #play-again:focus-visible { outline: none; text-shadow: 0 0 8px var(--mb-glow), 0 0 2px #000;
+    background: linear-gradient(90deg, rgb(190 16 40 / .9), rgb(12 2 4 / .95) 80%); }
+  .ending-note { margin: 3cqi 0 0; font: italic 2.3cqi/1.3 var(--mb-serif); color: var(--mb-dim); }
+  @keyframes mb-ending { from { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { #ending { animation: none; } }
+
+  /* the loading screen of a start (lib/loading-screen.js): in the canvas's place from the first
+     paint until the game has read what its title screen needs, then it fades out */
+  #loading { display: flex; flex-direction: column; align-items: center; justify-content: center;
+    align-self: stretch; justify-self: stretch; min-width: 0; min-height: 0; padding: 4%; text-align: center;
+    container-type: size;
+    background:
+      radial-gradient(ellipse 70% 55% at 50% 42%, rgb(170 16 38 / .55), transparent 72%),
+      linear-gradient(116deg, transparent 0 34%, rgb(255 170 180 / .06) 44%, transparent 54%), #080102;
+    box-shadow: 0 0 0 1px rgb(255 255 255 / .22), 0 0 0 2px #000, 0 10px 40px rgb(0 0 0 / .65);
+    transition: opacity .4s ease-out; }
+  #loading.done { opacity: 0; pointer-events: none; }
+  #loading .ending-game { margin: 0; }
+  .loading-bar { position: relative; overflow: hidden; width: 46cqi; height: max(2px, .7cqi); margin: 6cqi 0 0;
+    background: rgb(255 255 255 / .14); border-radius: 999px; }
+  .loading-bar > span { position: absolute; inset: 0 auto 0 0; width: 34%; border-radius: inherit;
+    background: linear-gradient(90deg, transparent, var(--bar, #e0283f), #ff9aa8, var(--bar, #e0283f), transparent);
+    box-shadow: 0 0 10px var(--mb-glow); animation: mb-loading 1.4s ease-in-out infinite; }
+  @keyframes mb-loading { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+  .loading-step { margin: 3.4cqi 0 0; font: italic 3cqi/1.3 var(--mb-serif); color: var(--mb-ink); text-shadow: 0 1px 0 #000; }
+  .loading-bytes { margin: 1.2cqi 0 0; min-height: 1.3em; font: 2.2cqi/1.3 var(--mb-mono); color: var(--mb-dim);
+    font-variant-numeric: tabular-nums; }
+  @media (prefers-reduced-motion: reduce) {
+    .loading-bar > span { animation: none; width: 100%; opacity: .55; }
+    #loading { transition: none; }
+  }
+  #message { max-width: 70ch; }
+  #message pre { white-space: pre-wrap; background: rgb(0 0 0 / .4); }
+  #message.banner { background: var(--mb-panel); border: 2px solid var(--mb-edge); border-radius: 8px;
+    box-shadow: 0 0 0 1px #000; color: var(--mb-ink); font-family: var(--mb-serif); }
+  #message.banner.error { border-color: #ff8f8f; color: #ffd6d6; }
+
+  /* the strips */
+  .side { display: flex; align-self: stretch; min-width: 0; padding: 14px 12px 12px; overflow-wrap: anywhere; }
+  .side-box { display: flex; flex-direction: column; gap: 22px; width: 100%; max-width: 250px; }
+  #side-left { grid-area: left; justify-content: flex-end; }
+  #side-right { grid-area: right; justify-content: flex-start; }
+  .side p { margin: 0; }
+
+  /* the title, after the game's logo */
+  .logo { container-type: inline-size; text-align: center; }
+  .tagline { font: italic .74rem/1.3 var(--mb-serif); color: var(--mb-ink); text-shadow: 0 1px 0 #000, 0 0 3px #000; }
+  /* tall, thin, widely spaced capitals, white fading to red, the second O boxed */
+  .wordmark { margin: 8px 0 6px; padding-left: .2em; font: 400 1.1rem/1 var(--mb-sans); font-size: clamp(1rem, 11cqi, 2rem);
+    font-stretch: condensed; letter-spacing: .2em; white-space: nowrap; transform: scaleY(1.18);
+    background: linear-gradient(180deg, #fff 0%, #f4dade 48%, #b0142c 100%); -webkit-background-clip: text; background-clip: text;
+    color: transparent; -webkit-text-stroke: .6px rgb(255 255 255 / .9); filter: drop-shadow(0 1px 2px #000); }
+  .wordmark .boxed { display: inline-block; padding: 0 .02em 0 .22em; margin: 0 .06em 0 -.04em; line-height: .95;
+    background: #000; -webkit-background-clip: border-box; background-clip: border-box; color: #c8142f;
+    outline: 1px solid var(--mb-ink); box-shadow: 0 0 0 2px #000; }
+  .subtitle { display: flex; align-items: center; gap: 8px; margin-top: 6px; font: 600 .78rem/1 var(--mb-sans);
+    letter-spacing: .45em; text-indent: .45em; color: var(--mb-ink); text-shadow: 0 0 3px #000; }
+  .subtitle::before, .subtitle::after { content: ""; flex: 1; height: 1px; background: var(--mb-ink); box-shadow: 0 1px 0 #000; }
+  .subtitle span { padding: 4px 6px; background: radial-gradient(closest-side, rgb(150 8 26 / .95), rgb(150 8 26 / .6) 60%, transparent); }
+  .final { align-self: flex-end; font: 700 .95rem/1 "Helvetica Neue", Arial, sans-serif; color: #fff;
+    text-shadow: 0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000; }
+
+  /* Controls and Settings over the game (lib/controls-host.js openPage): framed like a panel */
+  dialog.page-overlay { animation: mb-overlay-in .22s cubic-bezier(.22, 1, .36, 1) both; }
+  dialog.page-overlay.closing { animation: mb-overlay-out .16s cubic-bezier(.4, 0, 1, 1) both; pointer-events: none; }
+  dialog.page-overlay > iframe { border: 2px solid var(--mb-edge) !important; border-radius: 10px !important;
+    box-shadow: 0 0 0 1px #000, 0 18px 60px rgb(0 0 0 / .75); }
+  dialog.page-overlay::backdrop { background: rgb(20 0 4 / .62); animation: mb-fade-in .2s ease-out both; }
+  dialog.page-overlay.closing::backdrop { animation: mb-fade-out .16s ease-in both; }
+  @keyframes mb-overlay-in { from { opacity: 0; transform: translateY(14px) scale(.965); } to { opacity: 1; transform: none; } }
+  @keyframes mb-overlay-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(10px) scale(.975); } }
+  @keyframes mb-sheet-in { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: none; } }
+  @keyframes mb-sheet-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(24px); } }
+  @keyframes mb-drawer-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+  @keyframes mb-drawer-out { from { transform: translateX(0); } to { transform: translateX(100%); } }
+  @keyframes mb-fade-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes mb-fade-out { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes mb-drop-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  #message:not([hidden]) { animation: mb-drop-in .18s ease-out both; }
+
+  .lbl { font: italic .86rem/1.2 var(--mb-serif); color: var(--mb-dim); text-shadow: 0 1px 0 #000; }
+
+  /* each player's keys as chosen in Controls (play.js showKeys), under the game's button names */
+  .keys kbd { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;
+    min-width: 1.75em; max-width: 100%; height: 1.75em;
+    padding: 0 .3em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center;
+    font: 600 .8rem/1 var(--mb-mono); color: #fff; background: linear-gradient(#24060b, #000);
+    border: 1.5px solid var(--mb-edge); border-radius: 4px; box-shadow: 0 0 0 1px #000, inset 0 -2px 0 rgb(255 255 255 / .08); }
+  .keys kbd .mb-arr { --mb-arr: 10px; }
+  .keys kbd.wide { font-size: .66rem; padding: 0 .25em; }
+  .keys kbd.none { color: var(--mb-dim); border-style: dashed; }
+  .keygrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px 6px; margin-top: 9px; justify-items: center; align-items: center; }
+  .keygrid.three { grid-template-columns: 1fr 1fr 1.35fr; gap: 4px 4px; }
+  .keys-body > .keygrid:first-child { margin-top: 0; }
+  .keygrid .lbl { display: inline-flex; align-items: center; justify-content: center; font-size: .8rem; white-space: nowrap;
+    --mb-arr: 11px; --mb-btn: 1.12rem; --mb-btn-fs: .64rem; --mb-btn-bw: 1.25px; }
+  .keygrid.three .lbl { --mb-btn: .86rem; --mb-btn-fs: .5rem; --mb-btn-bw: 1px; --mb-plus: .52rem; }
+  .keygrid.three .mb-combo { gap: 1px; }
+  /* a keycap may use the gap beside it (6px), so a 4-character name fits the narrowest strip */
+  .keygrid .cap { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; max-width: calc(100% + 6px); }
+  .keygrid .role { font: italic .7rem/1.1 var(--mb-serif); color: var(--mb-dim); white-space: nowrap; text-shadow: 0 1px 0 #000; }
+
+  /* Basics: the shared techniques at a glance, under player 1's keys (the full list is the
+     Guide, guide.html). It goes where the window is too short for it (play.js fitBasics). */
+  .basics { container-type: inline-size; padding: 19px 7px 7px;
+    --mb-arr: 10.5px; --mb-arr-gap: 1px; --mb-tap-gap: 3px;
+    --mb-plus: .66rem; --mb-tag: .71rem; --mb-btn: 1.18rem; --mb-btn-fs: .66rem; }
+  .basics dl { display: flex; flex-direction: column; margin: 0; }
+  .basics dl > div { display: flex; align-items: center; justify-content: space-between; gap: 5px;
+    min-height: 24px; padding: 2.5px 4px; border-radius: 4px;
+    border-bottom: 1px solid rgb(236 230 230 / .09); transition: background-color .12s; }
+  .basics dl > div:last-child { border-bottom: 0; }
+  .basics dl > div:hover { background: linear-gradient(90deg, rgb(160 12 32 / .28), rgb(160 12 32 / .06) 85%, transparent); }
+  .basics dt { font: italic .8rem/1.2 var(--mb-serif); color: #d8c2c5; white-space: nowrap;
+    text-shadow: 0 1px 0 #000; transition: color .12s, text-shadow .12s; }
+  .basics dl > div:hover dt { color: #fff; text-shadow: 0 0 6px var(--mb-glow), 0 1px 0 #000; }
+  .basics dd { display: inline-flex; align-items: center; gap: 3px; margin: 0; white-space: nowrap; }
+  .basics .mb-tag { padding: 2px 4.5px 2.5px; }
+  @container (min-width: 195px) {
+    .basics dl { --mb-arr: 12px; --mb-arr-gap: 1.5px; --mb-tap-gap: 3.5px;
+      --mb-plus: .7rem; --mb-tag: .73rem; --mb-btn: 1.24rem; --mb-btn-fs: .68rem; }
+    .basics dl > div { min-height: 25px; padding: 3px 5px; gap: 8px; }
+    .basics dt { font-size: .84rem; }
+    .basics dd { gap: 4px; }
+    .basics .mb-plus { margin: 0 .5px; }
+    .basics .mb-tag { padding: 2px 5px 2.5px; }
+  }
+  .basics.off { display: none; } /* play.js fitBasics: when the strip would run past the window */
+  /* under player 1's keys: one row per key, the keycap and what it does on one centre line */
+  .keys .note { display: grid; grid-template-columns: max-content 1fr; align-items: center; gap: 6px 10px; margin-top: 10px;
+    font: italic .95rem/1.25 var(--mb-serif); color: var(--mb-ink); text-shadow: 0 1px 0 #000; }
+  .keys .note kbd, .keys .note kbd.wide { justify-self: stretch; min-width: 2.1em; height: 1.9em; padding: 0 .45em;
+    font-size: .85rem; line-height: calc(1.9em - 3px); }
+  .keys .note .all { grid-column: 1 / -1; margin-top: 2px; font-size: .84rem; color: var(--mb-dim); }
+
+  /* the "Information" panel: matches Player 1 and Basics, with a live status dot in its tab */
+  .info { margin-top: auto; padding: 18px 8px 7px; }
+  .info > .tab { display: inline-flex; align-items: center; gap: 6px; }
+  .info .info-dot { width: 7px; height: 7px; border-radius: 50%; flex: none;
+    background: #f2c46b; box-shadow: 0 0 0 1px #000, 0 0 7px rgb(242 196 107 / .75); transition: background-color .2s, box-shadow .2s; }
+  .info[data-state="live"] .info-dot { background: #6ee7a8; box-shadow: 0 0 0 1px #000, 0 0 7px rgb(110 231 168 / .8); }
+  .info[data-state="stop"] .info-dot { background: #8f7478; box-shadow: 0 0 0 1px #000; }
+  .info[data-state="err"] .info-dot { background: #ff5a6e; box-shadow: 0 0 0 1px #000, 0 0 8px rgb(255 90 110 / .85); }
+  .info dl { display: flex; flex-direction: column; margin: 0; }
+  .info dl > div { display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+    min-height: 23px; padding: 3px 5px; border-radius: 4px;
+    border-bottom: 1px solid rgb(236 230 230 / .09); transition: background-color .12s; }
+  .info dl > div:last-child { border-bottom: 0; }
+  .info dl > div:hover { background: linear-gradient(90deg, rgb(160 12 32 / .24), rgb(160 12 32 / .05) 85%, transparent); }
+  .info dt { font: italic .82rem/1.25 var(--mb-serif); color: #d8c2c5; white-space: nowrap; text-shadow: 0 1px 0 #000; }
+  .info dd { margin: 0; font: 600 .8rem/1.25 var(--mb-mono); color: #fff; font-variant-numeric: tabular-nums;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 0 #000; }
+  .info dd.idle { font: italic 400 .78rem/1.25 var(--mb-serif); color: rgb(201 179 182 / .72); }
+  .info .lat-row { cursor: help; }
+  #status { color: #fff; }
+  .info[data-state="live"] #status { color: #e8fff1; text-shadow: 0 0 6px rgb(94 224 154 / .35), 0 1px 0 #000; }
+
+  /* the menu: boxed items in italic serif, the chosen one glowing red */
+  #actions { display: flex; flex-direction: column; gap: 8px; }
+  #actions > a, #actions > button { display: block; width: 100%; margin: 0; padding: 4px 10px 5px; text-align: left;
+    font: italic 1rem/1.25 var(--mb-serif); color: var(--mb-dim); text-decoration: none; cursor: pointer;
+    background: linear-gradient(#0d0204, #000); border: 2px solid var(--mb-edge); border-radius: 5px;
+    box-shadow: 0 0 0 1px #000; text-shadow: 0 1px 0 #000;
+    transition: color .12s, text-shadow .12s, background-color .12s; }
+  #actions > a:hover, #actions > button:hover:not(:disabled), #actions > a:focus-visible, #actions > button:focus-visible {
+    color: #fff; outline: none; text-shadow: 0 0 7px var(--mb-glow), 0 0 2px #000;
+    background: linear-gradient(90deg, rgb(160 12 32 / .7), rgb(12 2 4 / .95) 75%); }
+  #fullscreen.suggest { color: #fff; font-weight: 400; border-color: var(--mb-edge); text-shadow: 0 0 7px var(--mb-glow), 0 0 2px #000; }
+  #actions > #sound:disabled { opacity: .65; cursor: default; background: transparent; border-color: rgb(236 230 230 / .35); font-size: .9rem; }
+  #actions > #sound.on { color: #e8fff1; border-color: rgb(143 224 168 / .72); }
+  #actions > #sound.muted { color: var(--mb-dim); border-color: rgb(236 230 230 / .45); border-style: dashed; }
+  #sound.waiting { color: #fff; animation: mb-call 1.6s ease-in-out infinite; }
+  #sound.failed { color: #ff9a9a; }
+  @keyframes mb-call { 50% { text-shadow: 0 0 9px var(--mb-glow), 0 0 2px #000; border-color: #ff8796; } }
+  @media (prefers-reduced-motion: reduce) { #sound.waiting { animation: none; text-shadow: 0 0 7px var(--mb-glow), 0 0 2px #000; } }
+
+  /* tighten side strip padding slightly on smaller desktop windows so panels stay crisp */
+  @media (max-width: 900px) {
+    .side { padding: 12px 8px; }
+    .side-box { gap: 16px; }
+  }
+
+  /* ------------------------------------------------------------ phone / touch mode (body.mobile) */
+  /* Hidden completely on desktop (windowed and fullscreen) so desktop layout is untouched. */
+  #mobile-hud, #touch-layer, #mobile-rotate-hint, #mobile-tip { display: none; }
+
+  html:has(body.mobile) { overflow: hidden; height: 100%; overscroll-behavior: none; }
+  body.mobile { display: block; height: 100dvh; min-height: 100dvh; overflow: hidden;
+    overscroll-behavior: none; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  /* Nothing here is text to select. body.mobile says so above, but in landscape the game goes
+     full screen on #stage (play.js wireMobileUi), and the browser's own style sheet makes a
+     full-screen element's text selectable again (Chrome: `:fullscreen { user-select: text }`, not
+     !important): a held button had its letter selected. Said on #stage itself, a page's rule
+     wins over the browser's; the bar and the controls say it too, whatever holds them. */
+  body.mobile #stage, body.mobile #mobile-hud, body.mobile #mobile-hud *, body.mobile #touch-layer, body.mobile #touch-layer * {
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  body.mobile .side { display: none; }
+  body.mobile #stage { position: relative; width: 100vw; height: 100dvh; padding: 0; gap: 0; overflow: hidden; }
+  body.mobile #message { position: absolute; top: max(48px, calc(env(safe-area-inset-top) + 44px)); left: 12px; right: 12px;
+    z-index: 26; margin: 0 auto; font-size: .86rem; padding: 8px 12px; }
+  body.mobile #play-again { min-height: 44px; padding: .5em 1.8em; }
+  body.ended #touch-layer, body.mobile #touch-layer.tc-hidden { display: none !important; }
+
+  /* A first visit's hint (play.js wireMobileUi): what A and B do in the menus, by the picture for
+     a few seconds once the game is up. Under the picture in portrait, where the deck is empty
+     above the buttons; at the picture's top edge in landscape. Never in the way of a touch. */
+  body.mobile #screen { position: relative; }
+  body.mobile #mobile-tip:not([hidden]) { display: inline-flex; align-items: center; gap: 6px; position: absolute; z-index: 22;
+    left: 0; right: 0; top: 8px; width: max-content; margin: 0 auto; padding: 5px 12px 6px; white-space: nowrap; pointer-events: none;
+    font: italic .86rem/1 var(--mb-serif); color: #fff; text-shadow: 0 1px 0 #000;
+    background: linear-gradient(180deg, rgb(22 3 6 / .92), rgb(4 0 1 / .94)); border: 1.5px solid var(--mb-edge); border-radius: 999px;
+    box-shadow: 0 0 0 1px #000, 0 4px 14px rgb(0 0 0 / .6);
+    --mb-btn: 1.2rem; --mb-btn-fs: .66rem; --mb-btn-bw: 1.25px;
+    animation: mb-drop-in .25s ease-out backwards; transition: opacity .4s ease-out; } /* backwards: .out's opacity applies afterwards */
+  body.mobile.mobile-portrait #mobile-tip:not([hidden]) { top: calc(100% + 8px); }
+  #mobile-tip .mt-sep { margin: 0 3px; color: var(--mb-dim); }
+  #mobile-tip.out { opacity: 0; }
+  body.ended #mobile-tip, body.tc-overlay-hidden #mobile-tip { display: none !important; }
+  @media (prefers-reduced-motion: reduce) { body.mobile #mobile-tip:not([hidden]) { animation: none; transition: none; } }
+
+  /* Full-bleed modal page overlays (Controls / Settings / Guide) on phones */
+  body.mobile dialog.page-overlay { margin: 0 !important; width: 100vw !important; height: 100dvh !important; max-width: none !important; max-height: none !important;
+    animation: mb-sheet-in .24s cubic-bezier(.22, 1, .36, 1) both; }
+  body.mobile dialog.page-overlay.closing { animation: mb-sheet-out .16s cubic-bezier(.4, 0, 1, 1) both; }
+  body.mobile dialog.page-overlay > iframe { border: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
+  @media (max-width: 720px), (max-height: 520px) {
+    dialog.page-overlay { margin: 0 !important; width: 100vw !important; height: 100dvh !important; max-width: none !important; max-height: none !important;
+      animation: mb-sheet-in .24s cubic-bezier(.22, 1, .36, 1) both; }
+    dialog.page-overlay.closing { animation: mb-sheet-out .16s cubic-bezier(.4, 0, 1, 1) both; }
+    dialog.page-overlay > iframe { border: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
+  }
+
+  /* Keep crimson backdrop & mobile structure when Android Fullscreen API targets #stage */
+  body.mobile #stage:fullscreen, body.mobile #stage:-webkit-full-screen {
+    width: 100vw; height: 100dvh; padding: 0; gap: 0;
+    background: radial-gradient(ellipse 110% 130% at 50% 30%, #7a1020 0%, #3d0710 56%, #120205 100%); }
+  body.mobile.mobile-portrait #stage:fullscreen, body.mobile.mobile-portrait #stage:-webkit-full-screen {
+    justify-content: flex-start; }
+
+  /* Mobile top bar: authentic Melty Blood Re·ACT framed tabs & boxed italic-serif buttons */
+  .mhud-left, .mhud-right { display: flex; align-items: center; gap: 6px; pointer-events: auto; }
+  .mhud-fps { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 8px;
+    font: 600 .72rem/1 var(--mb-mono); font-variant-numeric: tabular-nums; color: #fff;
+    background: linear-gradient(180deg, #130205, #050102);
+    border: 1.5px solid var(--mb-edge); border-radius: 5px;
+    box-shadow: 0 0 0 1px #000, inset 0 1px 0 rgb(255 255 255 / .08), 0 3px 10px rgb(0 0 0 / .55);
+    text-shadow: 0 1px 0 #000; white-space: nowrap; }
+  .mhud-fps .info-dot { width: 7px; height: 7px; border-radius: 50%; flex: none;
+    background: #f2c46b; box-shadow: 0 0 0 1px #000, 0 0 6px rgb(242 196 107 / .75); }
+  .mhud-fps[data-state="live"] .info-dot { background: #6ee7a8; box-shadow: 0 0 0 1px #000, 0 0 7px rgb(110 231 168 / .85); }
+  .mhud-fps[data-state="live"] { color: #e8fff1; text-shadow: 0 0 6px rgb(94 224 154 / .35), 0 1px 0 #000; }
+  .mhud-fps[data-state="stop"] .info-dot { background: #8f7478; box-shadow: 0 0 0 1px #000; }
+  .mhud-fps[data-state="err"] .info-dot { background: #ff5a6e; box-shadow: 0 0 0 1px #000, 0 0 7px rgb(255 90 110 / .85); }
+  .mhud-btn { display: inline-flex; align-items: center; justify-content: center; height: 30px; padding: 0 9px; margin: 0;
+    font: italic 600 .84rem/1 var(--mb-serif); color: var(--mb-ink); cursor: pointer; touch-action: manipulation;
+    background: linear-gradient(180deg, #160306, #040001);
+    border: 1.5px solid var(--mb-edge); border-radius: 5px;
+    box-shadow: 0 0 0 1px #000, inset 0 1px 0 rgb(255 255 255 / .08), 0 3px 10px rgb(0 0 0 / .55);
+    text-shadow: 0 0 6px rgb(255 42 70 / .35), 0 1px 0 #000; white-space: nowrap;
+    transition: transform .08s, color .12s, background-color .12s, border-color .12s, text-shadow .12s; }
+  .mhud-btn.mhud-menu { background: linear-gradient(90deg, rgb(148 12 32 / .62), rgb(10 2 4 / .96) 84%); color: #fff;
+    text-shadow: 0 0 7px var(--mb-glow), 0 1px 0 #000; }
+  .mhud-btn:active { transform: scale(.94); color: #fff; text-shadow: 0 0 8px var(--mb-glow), 0 1px 0 #000;
+    background: linear-gradient(90deg, rgb(185 18 42 / .92), rgb(16 2 5 / .96) 85%); }
+  .mhud-btn.waiting { color: #fff; border-color: #ff8796; animation: mb-call 1.6s ease-in-out infinite; }
+  .mhud-btn.on { color: #e2ffec; border-color: rgb(143 224 168 / .75); text-shadow: 0 0 6px rgb(94 224 154 / .35), 0 1px 0 #000; }
+  .mhud-btn.muted { color: var(--mb-dim); border-color: rgb(236 230 230 / .45); border-style: dashed; text-shadow: 0 1px 0 #000; }
+  .mhud-btn.failed { color: #ff9a9a; border-color: rgb(255 143 143 / .65); }
+
+  /* Landscape mode: 4:3 canvas centered, controls and HUD strictly fitted inside left/right gutters */
+  body.mobile.mobile-landscape #stage { justify-content: center; align-items: center;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) * .75); }
+  body.mobile.mobile-landscape #mobile-hud { position: absolute; top: 0; left: 0; right: 0; z-index: 20;
+    display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none;
+    padding: max(6px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left)); }
+  body.mobile.mobile-landscape.mobile-tight-gutter .mhud-left { flex-direction: column; align-items: flex-start; gap: 5px; }
+  body.mobile.mobile-landscape.mobile-tight-gutter .mhud-right { flex-direction: column-reverse; align-items: flex-end; gap: 5px; }
+  /* where the strip beside the picture is narrower than the pills (a 16:9 phone; play.js layoutCanvas):
+     the pills no wider than it, so they stay off the picture */
+  body.mobile.mobile-landscape.mobile-hud-narrow .mhud-left > * { max-width: var(--hud-max-l, none); }
+  body.mobile.mobile-landscape.mobile-hud-narrow .mhud-right > * { max-width: var(--hud-max-r, none); }
+  body.mobile.mobile-landscape.mobile-hud-narrow .mhud-fps,
+  body.mobile.mobile-landscape.mobile-hud-narrow .mhud-btn { min-width: 0; padding: 0 6px; overflow: hidden; }
+  body.mobile.mobile-landscape.mobile-hud-narrow .mhud-fps { gap: 4px; font-size: .68rem; }
+  body.mobile.mobile-landscape.mobile-hud-narrow #mob-status { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  body.mobile.mobile-landscape.mobile-hud-narrow .mhud-unit { display: none; } /* "60.0", the dot beside it; the Menu has the unit */
+  body.mobile.mobile-landscape.mobile-hud-narrow #mob-sound { font-size: .78rem; }
+  body.mobile.mobile-landscape #touch-layer { position: absolute; inset: 0; z-index: 15;
+    display: flex; justify-content: space-between; align-items: flex-end; pointer-events: none;
+    padding: 0 max(8px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); }
+  body.mobile.mobile-landscape .tc-zone { pointer-events: auto; position: relative; touch-action: none;
+    height: calc(100% - 44px); display: flex; align-items: flex-end; }
+  body.mobile.mobile-landscape .tc-left { width: var(--gutter-l, min(40vw, 152px)); justify-content: flex-start; padding: 0 0 6px 0; }
+  body.mobile.mobile-landscape .tc-right { width: var(--gutter-r, min(44vw, 152px)); justify-content: flex-end; padding: 0 0 6px 0; }
+  body.mobile.mobile-landscape .tc-dpad { transform-origin: bottom left;
+    transform: scale(min(var(--tc-scale, 1), var(--tc-max-l, 1))); }
+  body.mobile.mobile-landscape .tc-cluster { transform-origin: bottom right;
+    transform: scale(min(var(--tc-scale, 1), var(--tc-max-r, 1))); }
+  body.mobile.mobile-landscape .tc-stick-base {
+    transform: translate(-50%, -50%) scale(min(var(--tc-scale, 1), var(--tc-max-l, 1))); }
+
+  /* Portrait mode: Melty Blood framed top bar, edge-to-edge 4:3 canvas, dedicated lower controller deck */
+  body.mobile.mobile-portrait #stage { display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding-top: env(safe-area-inset-top); }
+  body.mobile.mobile-portrait #mobile-hud { position: relative; flex: none; width: 100%; z-index: 20;
+    display: flex; justify-content: space-between; align-items: center; gap: 6px;
+    padding: 7px max(10px, env(safe-area-inset-right)) 7px max(10px, env(safe-area-inset-left));
+    background:
+      linear-gradient(90deg, rgb(135 12 30 / .34), rgb(12 2 4 / .94) 38%, rgb(12 2 4 / .94) 62%, rgb(135 12 30 / .34)),
+      #090103;
+    border-bottom: 2px solid var(--mb-edge);
+    box-shadow: 0 1px 0 #000, 0 4px 16px rgb(0 0 0 / .6); }
+  body.mobile.mobile-portrait #screen { flex: none; width: 100%; place-items: center; background: #000; }
+  body.mobile.mobile-portrait #canvas { box-shadow: none; border-bottom: 1px solid rgb(236 230 230 / .24); }
+  body.mobile.mobile-portrait #touch-layer { position: relative; flex: 1; width: 100%; min-height: 0; z-index: 15;
+    display: flex; justify-content: space-between; align-items: center; gap: 6px;
+    padding: 10px max(10px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+    background:
+      radial-gradient(ellipse 90% 80% at 50% 0%, rgb(130 14 32 / .26), transparent 72%),
+      linear-gradient(180deg, rgb(14 2 4 / .78), rgb(6 1 2 / .94)); }
+  body.mobile.mobile-portrait .tc-zone { flex: 1; height: 100%; position: relative; touch-action: none;
+    display: flex; align-items: center; min-width: 0; }
+  body.mobile.mobile-portrait .tc-left { justify-content: flex-start; padding-left: 4px; }
+  body.mobile.mobile-portrait .tc-right { justify-content: flex-end; padding-right: 4px; }
+  body.mobile.mobile-portrait .tc-dpad { transform-origin: center left; }
+  body.mobile.mobile-portrait .tc-cluster { transform-origin: center right; }
+  body.mobile.mobile-portrait #mobile-rotate-hint:not([hidden]) {
+    display: flex; align-items: center; justify-content: center; gap: 10px; flex: none; width: 100%;
+    padding: 5px 12px max(7px, env(safe-area-inset-bottom));
+    background: rgb(5 0 2 / .94); border-top: 1px solid rgb(236 230 230 / .14);
+    font: italic .76rem/1.2 var(--mb-serif); color: var(--mb-dim); }
+  #mob-rotate-dismiss { border: 0; background: transparent; color: var(--mb-dim); padding: 2px 6px; font-size: .85rem; cursor: pointer; }
+
+  /* ---- Touch control visuals (Melty Blood obsidian-crimson glass & jewel buttons) */
+  /* --tc-dim (play.js layoutCanvas): below 1 where the controls lie over the picture's edges */
+  #touch-layer { --tc-scale: 1; --tc-opacity: .9; opacity: calc(var(--tc-opacity) * var(--tc-dim, 1)); transition: opacity .15s; }
+  #touch-layer[data-mode="stick"] .tc-dpad { display: none; }
+  #touch-layer[data-mode="dpad"] .tc-stick-base { display: none; }
+  #touch-layer[data-macros="dash"] .tc-macro[data-group="extra"] { display: none; }
+  #touch-layer[data-macros="none"] .tc-macros { display: none; }
+
+  /* Left thumb: 8-way sliding arcade D-pad saucer */
+  .tc-dpad { --dpad: clamp(120px, 34vmin, 146px); width: var(--dpad); height: var(--dpad); flex: none;
+    transform: scale(var(--tc-scale)); will-change: transform; }
+  .tc-dpad-ring { position: relative; width: 100%; height: 100%; border-radius: 50%;
+    background:
+      radial-gradient(circle at 50% 45%, rgb(42 6 12 / .86) 0%, rgb(14 2 4 / .92) 66%, rgb(6 1 2 / .96) 100%);
+    border: 2px solid rgb(236 230 230 / .58);
+    box-shadow: 0 0 0 1px #000, inset 0 0 18px rgb(0 0 0 / .7), 0 8px 22px rgb(0 0 0 / .55); }
+  .tc-dpad-ring.held { border-color: rgb(255 170 184 / .88); box-shadow: 0 0 0 1px #000, 0 0 16px rgb(255 42 70 / .32), inset 0 0 18px rgb(0 0 0 / .65); }
+  .tc-dir { position: absolute; display: grid; place-items: center; width: 34%; height: 34%;
+    color: rgb(236 230 230 / .72); --mb-arr: 17px; transition: color .06s, transform .06s, filter .06s; }
+  .tc-dir-up { top: 4%; left: 33%; }
+  .tc-dir-down { bottom: 4%; left: 33%; }
+  .tc-dir-left { left: 4%; top: 33%; }
+  .tc-dir-right { right: 4%; top: 33%; }
+  .tc-dir.active { color: #fff; transform: scale(1.16); filter: drop-shadow(0 0 8px var(--mb-glow)) drop-shadow(0 0 2px #fff); }
+  .tc-diag { position: absolute; width: 7px; height: 7px; border-radius: 50%;
+    background: rgb(236 230 230 / .22); border: 1px solid rgb(0 0 0 / .6); transition: background-color .06s, box-shadow .06s; }
+  .tc-diag-nw { top: 18%; left: 18%; }
+  .tc-diag-ne { top: 18%; right: 18%; }
+  .tc-diag-sw { bottom: 18%; left: 18%; }
+  .tc-diag-se { bottom: 18%; right: 18%; }
+  .tc-diag.active { background: #ff5b73; box-shadow: 0 0 9px var(--mb-glow), 0 0 3px #fff; }
+  .tc-dpad-nub { position: absolute; top: 50%; left: 50%; width: 26%; height: 26%; margin: -13% 0 0 -13%; border-radius: 50%;
+    background: radial-gradient(circle at 38% 32%, rgb(195 28 52 / .84), rgb(28 4 8 / .96) 72%);
+    border: 1.5px solid rgb(236 230 230 / .62); box-shadow: 0 2px 8px rgb(0 0 0 / .75); pointer-events: none;
+    will-change: transform; transition: transform .09s ease-out; }
+  .tc-dpad-ring.held .tc-dpad-nub { transition: none; border-color: rgb(255 210 218 / .9);
+    box-shadow: 0 0 12px rgb(255 42 70 / .55), 0 2px 8px rgb(0 0 0 / .75); }
+
+  /* Left thumb: floating virtual stick */
+  .tc-stick-base { position: absolute; left: 50%; top: 58%; width: clamp(114px, 32vmin, 138px); height: clamp(114px, 32vmin, 138px);
+    transform: translate(-50%, -50%) scale(var(--tc-scale)); border-radius: 50%; pointer-events: none;
+    background: radial-gradient(circle, rgb(18 2 5 / .36) 0%, rgb(10 1 3 / .62) 100%);
+    border: 2px dashed rgb(236 230 230 / .38); box-shadow: inset 0 0 14px rgb(0 0 0 / .5);
+    opacity: .55; transition: opacity .1s; }
+  .tc-stick-base.active { opacity: 1; border-style: solid; border-color: rgb(255 160 176 / .85);
+    box-shadow: 0 0 18px rgb(255 42 70 / .3), inset 0 0 14px rgb(0 0 0 / .6); }
+  .tc-stick-knob { position: absolute; top: 50%; left: 50%; width: 42%; height: 42%; margin: -21% 0 0 -21%; border-radius: 50%;
+    background: radial-gradient(circle at 36% 30%, #d42644 0%, #6d0b1a 60%, #1c0206 100%);
+    border: 2px solid rgb(246 238 238 / .9); box-shadow: 0 0 0 1px #000, 0 4px 12px rgb(0 0 0 / .75); }
+
+  /* Right thumb: generous 2-row Melty Blood macro deck + staggered 2x2 jewel arc */
+  .tc-cluster { display: flex; flex-direction: column; align-items: flex-end; gap: 11px; flex: none;
+    transform: scale(var(--tc-scale)); will-change: transform; }
+  .tc-macros { display: grid; grid-template-columns: 1fr 1.18fr; gap: 6px; width: 144px; }
+  .tc-macro { display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    min-height: 36px; padding: 4px 6px; border-radius: 7px;
+    background: linear-gradient(180deg, rgb(32 5 10 / .94), rgb(10 1 3 / .97));
+    border: 1.5px solid var(--mb-edge);
+    box-shadow: 0 0 0 1px #000, inset 0 1px 0 rgb(255 255 255 / .1), 0 4px 12px rgb(0 0 0 / .55);
+    color: #fff; --mb-btn: 1.08rem; --mb-btn-fs: .62rem; --mb-btn-bw: 1.25px; --mb-plus: .62rem;
+    transition: transform .05s, border-color .06s, box-shadow .06s, background-color .06s; }
+  .tc-macro-ab { grid-column: 1 / -1; min-height: 38px; padding: 4px 10px;
+    border-color: rgb(245 232 188 / .88);
+    background: linear-gradient(90deg, rgb(126 16 32 / .65), rgb(14 2 5 / .96) 76%);
+    --mb-btn: 1.18rem; --mb-btn-fs: .66rem; --mb-plus: .68rem; }
+  .tc-macro-abc { --mb-btn: .98rem; --mb-btn-fs: .56rem; --mb-plus: .54rem; }
+  .tc-macro .mb-combo { gap: 1.5px; }
+  .tc-macro-sub { font: italic 600 .8rem/1 var(--mb-serif); color: #ffe8ba; text-shadow: 0 0 6px var(--mb-glow), 0 1px 0 #000; margin-left: 2px; }
+  .tc-macro.active { transform: scale(.93); border-color: #fff;
+    background: linear-gradient(180deg, rgb(195 22 48 / .96), rgb(76 6 18 / .98));
+    box-shadow: 0 0 0 1px #000, 0 0 16px var(--mb-glow); }
+
+  .tc-face { --btn: clamp(48px, 13.5vmin, 58px); display: grid; grid-template-columns: var(--btn) var(--btn);
+    gap: 10px 10px; padding: 0 2px 4px 10px; }
+  .tc-btn { width: var(--btn); height: var(--btn); font-size: calc(var(--btn) * .42); border-width: 2px;
+    box-shadow: 0 0 0 1.5px #000, inset 0 2px 3px rgb(255 255 255 / .3), 0 6px 16px rgb(0 0 0 / .6);
+    transition: transform .05s, filter .06s, box-shadow .06s; }
+  .tc-btn-a { transform: translateX(-8px); }
+  .tc-btn-d { transform: translate(-5px, 4px); }
+  .tc-btn-b { transform: translateX(0); }
+  .tc-btn-c { transform: translate(2px, 4px); }
+  .tc-btn.active { filter: brightness(1.36); border-color: #fff;
+    box-shadow: 0 0 0 1.5px #000, inset 0 0 12px rgb(255 255 255 / .55), 0 0 20px rgb(255 255 255 / .45); }
+  .tc-btn-a.active { transform: translateX(-8px) scale(.92); }
+  .tc-btn-d.active { transform: translate(-5px, 4px) scale(.92); }
+  .tc-btn-b.active { transform: scale(.92); }
+  .tc-btn-c.active { transform: translate(2px, 4px) scale(.92); }
+
+  /* ---- Mobile Menu Drawer (<dialog id="mobile-drawer">) */
+  #mobile-drawer { margin: 0 0 0 auto; padding: 0; border: 0; border-left: 2px solid var(--mb-edge);
+    width: min(340px, 90vw); height: 100dvh; max-width: none; max-height: 100dvh; overflow: hidden;
+    color: var(--mb-ink); background: linear-gradient(180deg, #1b0307 0%, #0b0103 100%);
+    box-shadow: -12px 0 42px rgb(0 0 0 / .85);
+    animation: mb-drawer-in .24s cubic-bezier(.22, 1, .36, 1) both; }
+  #mobile-drawer.closing { animation: mb-drawer-out .18s cubic-bezier(.4, 0, 1, 1) both; pointer-events: none; }
+  #mobile-drawer::backdrop { background: rgb(12 0 3 / .68); animation: mb-fade-in .22s ease-out both; }
+  #mobile-drawer.closing::backdrop { animation: mb-fade-out .18s ease-in both; }
+  .md-scroll { height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y;
+    display: flex; flex-direction: column; gap: 14px;
+    padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) 16px; }
+  .md-head { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding-bottom: 10px; border-bottom: 1px solid rgb(236 230 230 / .2); }
+  .md-title { margin: 0; font: 600 .95rem/1.1 var(--mb-sans); letter-spacing: .16em; color: #fff; text-shadow: 0 0 8px var(--mb-glow); }
+  .md-title span { display: block; margin-top: 2px; font: italic 500 .78rem/1.1 var(--mb-serif); letter-spacing: .08em; color: #ffb3bd; text-shadow: none; }
+  .md-close { min-width: 36px; height: 36px; padding: 0 10px; margin: 0; font: 600 1rem/1 var(--mb-sans);
+    color: #fff; background: rgb(0 0 0 / .6); border: 1.5px solid var(--mb-edge); border-radius: 6px; cursor: pointer; }
+  .md-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .md-metric { padding: 6px 8px; background: rgb(0 0 0 / .45); border: 1px solid rgb(236 230 230 / .2); border-radius: 6px; }
+  .md-metric span { display: block; font: italic .7rem/1.1 var(--mb-serif); color: var(--mb-dim); }
+  .md-metric strong { display: block; margin-top: 2px; font: 600 .78rem/1.2 var(--mb-mono); color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .md-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .md-actions button { min-height: 40px; padding: 6px 10px; margin: 0; text-align: center;
+    font: italic 600 .95rem/1.2 var(--mb-serif); color: #fff; cursor: pointer;
+    background: linear-gradient(90deg, rgb(140 12 30 / .5), rgb(12 2 4 / .94) 85%);
+    border: 1.5px solid var(--mb-edge); border-radius: 6px; box-shadow: 0 0 0 1px #000; text-shadow: 0 1px 0 #000; }
+  .md-actions button.span2 { grid-column: 1 / -1; }
+  .md-actions button.muted { color: var(--mb-dim); border-style: dashed; background: linear-gradient(#0d0204, #000); }
+  .md-actions button:disabled { opacity: .65; }
+  /* what the side strip's note says beside a desktop's keys (play.js showKeys), for the touch buttons */
+  .md-keys { margin: 0; font: italic .84rem/1.6 var(--mb-serif); color: var(--mb-dim);
+    --mb-btn: 1.15rem; --mb-btn-fs: .64rem; --mb-btn-bw: 1.25px; }
+  .md-keys .mb-btn { margin: 0 1px; vertical-align: -.22em; }
+  .md-ios-hint { margin: 0; padding: 7px 10px; font: italic .78rem/1.35 var(--mb-serif); color: #ebd2d6;
+    background: rgb(160 16 38 / .18); border: 1px solid rgb(236 230 230 / .22); border-radius: 6px; }
+  .md-sec { padding: 10px 12px; background: rgb(0 0 0 / .42); border: 1px solid rgb(236 230 230 / .22); border-radius: 8px;
+    display: flex; flex-direction: column; gap: 10px; }
+  .md-sec h3 { margin: 0; font: italic 600 .92rem/1.2 var(--mb-serif); color: #fff; text-shadow: 0 0 6px var(--mb-glow); }
+  .md-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font: italic .84rem/1.2 var(--mb-serif); color: var(--mb-dim); }
+  .md-seg { display: inline-flex; border: 1.5px solid rgb(236 230 230 / .55); border-radius: 6px; overflow: hidden; }
+  .md-seg button { margin: 0; padding: 5px 10px; border: 0; border-right: 1px solid rgb(236 230 230 / .25); border-radius: 0;
+    font: 600 .76rem/1 var(--mb-sans); color: var(--mb-dim); background: #0d0204; cursor: pointer; }
+  .md-seg button:last-child { border-right: 0; }
+  .md-seg button[aria-pressed="true"] { color: #fff; background: linear-gradient(180deg, #b81834, #680a19); text-shadow: 0 1px 0 #000; }
+  .md-slider { width: 130px; accent-color: #d8203f; }
+  .md-pad-note { margin: 0; font: italic .76rem/1.3 var(--mb-serif); color: #9ce6b8; }
+  .md-basics { padding: 8px 10px; background: rgb(0 0 0 / .42); border: 1px solid rgb(236 230 230 / .22); border-radius: 8px; }
+  .md-basics summary { cursor: pointer; font: italic 600 .88rem/1.3 var(--mb-serif); color: #fff; }
+  .md-basics dl { display: flex; flex-direction: column; margin: 8px 0 0;
+    --mb-arr: 11px; --mb-arr-gap: 1.5px; --mb-tap-gap: 3px; --mb-plus: .68rem; --mb-tag: .72rem; --mb-btn: 1.2rem; --mb-btn-fs: .66rem; }
+  .md-basics[open] dl { animation: mb-drop-in .18s ease-out both; }
+  .md-basics dl > div { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 4px 2px;
+    border-bottom: 1px solid rgb(236 230 230 / .1); }
+  .md-basics dl > div:last-child { border-bottom: 0; }
+  .md-basics dt { font: italic .82rem/1.2 var(--mb-serif); color: #d8c2c5; }
+  .md-basics dd { display: inline-flex; align-items: center; gap: 3px; margin: 0; white-space: nowrap; }
+  @media (prefers-reduced-motion: reduce) {
+    dialog.page-overlay, dialog.page-overlay.closing, dialog.page-overlay::backdrop, dialog.page-overlay.closing::backdrop,
+    #mobile-drawer, #mobile-drawer.closing, #mobile-drawer::backdrop, #mobile-drawer.closing::backdrop,
+    .md-basics[open] dl, #message:not([hidden]) { animation: none !important; }
+  }
+</style>
+<script type="module" src="play.js"></script>
+</head>
+<body class="play">
+<div id="safe-probe" aria-hidden="true" style="position:fixed;inset:auto;width:0;height:0;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)"></div>
+<svg width="0" height="0" style="position:absolute;pointer-events:none" aria-hidden="true" focusable="false">
+  <symbol id="mb-arr" viewBox="0 0 12 12"><path d="M1.2 4.6 H6.2 V2.3 L11 6 L6.2 9.7 V7.4 H1.2 Z" fill="currentColor"/></symbol>
+</svg>
+<aside id="side-left" class="side">
+  <div class="side-box">
+    <div class="logo">
+      <p class="tagline">Through the Looking-Glass, Fairy Tale transparently</p>
+      <h1 class="wordmark">MELTY BL<span class="boxed">O</span>OD</h1>
+      <p class="subtitle"><span>Re·ACT</span></p>
+    </div>
+    <section class="panel keys" aria-label="Player 1 keys">
+      <h2 class="tab">Player 1</h2>
+      <div class="keys-body" data-player="1"></div>
+      <p class="note"></p>
+    </section>
+    <section class="panel basics" aria-label="Basics">
+      <h2 class="tab">Basics</h2>
+      <dl>
+        <div title="Hold away from the attack; ↙ to guard low"><dt>Guard</dt><dd aria-label="hold back"><span class="mb-tag">hold</span><span class="mb-m" aria-hidden="true"><svg class="mb-arr" style="--r:180deg"><use href="#mb-arr"/></svg></span></dd></div>
+        <div title="Close to the opponent"><dt>Throw</dt><dd aria-label="forward plus C"><span class="mb-m" aria-hidden="true"><svg class="mb-arr"><use href="#mb-arr"/></svg></span><span class="mb-plus" aria-hidden="true">+</span><span class="mb-btn c">C</span></dd></div>
+        <div title="Tap twice; ← ← to backstep"><dt>Dash</dt><dd aria-label="forward twice"><span class="mb-m tap" aria-hidden="true"><svg class="mb-arr"><use href="#mb-arr"/></svg><svg class="mb-arr"><use href="#mb-arr"/></svg></span></dd></div>
+        <div title="As the attack arrives"><dt>Shield</dt><dd><span class="mb-btn d">D</span></dd></div>
+        <div title="Right after a successful shield"><dt>Shield counter</dt><dd aria-label="quarter circle forward plus D"><span class="mb-m" aria-hidden="true"><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:45deg"><use href="#mb-arr"/></svg><svg class="mb-arr"><use href="#mb-arr"/></svg></span><span class="mb-plus" aria-hidden="true">+</span><span class="mb-btn d">D</span></dd></div>
+        <div title="A special move done with C: stronger, for 100% of the gauge (more in the Guide)"><dt>EX move</dt><dd aria-label="special plus C"><span class="mb-tag">special</span><span class="mb-plus" aria-hidden="true">+</span><span class="mb-btn c">C</span></dd></div>
+        <div title="Blue aura, for 100% of the gauge; again in Heat for Blood Heat (gold aura)"><dt>Heat</dt><dd aria-label="down three times plus D"><span class="mb-m tap" aria-hidden="true"><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg></span><span class="mb-plus" aria-hidden="true">+</span><span class="mb-btn d">D</span></dd></div>
+        <div title="With 300% of the gauge, or in Heat"><dt>Arc Drive</dt><dd aria-label="half circle forward plus C"><span class="mb-m" aria-hidden="true"><svg class="mb-arr" style="--r:180deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:135deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:45deg"><use href="#mb-arr"/></svg><svg class="mb-arr"><use href="#mb-arr"/></svg></span><span class="mb-plus" aria-hidden="true">+</span><span class="mb-btn c">C</span></dd></div>
+      </dl>
+    </section>
+    <section class="panel info" id="info" data-state="load" aria-label="Information">
+      <h2 class="tab"><span class="info-dot" aria-hidden="true"></span>Information</h2>
+      <dl id="latency">
+        <div><dt id="status-lbl">Status</dt><dd id="status" class="idle" aria-live="polite">Loading…</dd></div>
+        <div class="lat-row" title="Input: from a key press to the first frame drawn with it (keyboard; the screen shows that frame at its next refresh)."><dt>Input</dt><dd id="lat-input" class="idle">press a key</dd></div>
+        <div class="lat-row" title="Sound: how far the sound plays behind the picture."><dt>Sound</dt><dd id="lat-sound" class="idle">off</dd></div>
+      </dl>
+    </section>
+  </div>
+</aside>
+<div id="stage">
+  <div id="mobile-hud" aria-label="Game bar">
+    <div class="mhud-left">
+      <span class="mhud-fps" id="mob-fps" data-state="load"><span class="info-dot" aria-hidden="true"></span><span id="mob-status">Loading…</span></span>
+      <button type="button" class="mhud-btn" id="mob-pause" aria-label="Pause game">Pause</button>
+    </div>
+    <div class="mhud-right">
+      <button type="button" class="mhud-btn" id="mob-sound" hidden>Sound</button>
+      <button type="button" class="mhud-btn mhud-menu" id="mob-menu-btn" aria-label="Open menu">Menu</button>
+    </div>
+  </div>
+  <p id="message" class="banner" hidden></p>
+  <div id="screen">
+    <canvas id="canvas" width="640" height="480" tabindex="0"></canvas>
+    <div id="loading" role="status" aria-live="polite" aria-busy="true">
+      <p class="ending-game"><span>MELTY BLOOD</span> <span class="ending-sub">Re·ACT</span></p>
+      <div class="loading-bar" aria-hidden="true"><span></span></div>
+      <p class="loading-step">Loading…</p>
+      <p class="loading-bytes"></p>
+    </div>
+    <div id="ending" role="status" hidden>
+      <p class="ending-title">Thank you for playing</p>
+      <p class="ending-game"><span>MELTY BLOOD</span> <span class="ending-sub">Re·ACT</span></p>
+      <button type="button" id="play-again">Play again</button>
+      <p class="ending-note">Your progress, settings and keys are kept in this browser.</p>
+    </div>
+    <p id="mobile-tip" role="status" hidden><span class="mb-btn a">A</span> confirms <span class="mt-sep" aria-hidden="true">·</span> <span class="mb-btn b">B</span> goes back</p>
+  </div>
+  <div id="touch-layer" aria-label="Touch controls"></div>
+  <div id="mobile-rotate-hint" hidden>
+    <span>Rotate sideways for a larger screen</span>
+    <button type="button" id="mob-rotate-dismiss" aria-label="Dismiss rotate hint">✕</button>
+  </div>
+</div>
+<aside id="side-right" class="side">
+  <div class="side-box">
+    <p class="final">Final Tuned</p>
+    <nav class="panel menu" aria-label="Game page">
+      <h2 class="tab">Menu</h2>
+      <div id="actions">
+        <a href="./guide.html">Guide</a>
+        <a href="./settings.html">Settings</a>
+        <a href="./music.html">Music</a>
+        <button id="fullscreen" type="button" hidden>Full screen (Alt+Enter)</button>
+        <button id="sound" type="button" hidden></button>
+      </div>
+    </nav>
+    <section class="panel keys" aria-label="Player 2 keys">
+      <h2 class="tab">Player 2</h2>
+      <div class="keys-body" data-player="2"></div>
+    </section>
+  </div>
+</aside>
+<dialog id="mobile-drawer" aria-label="Game menu">
+  <div class="md-scroll">
+    <div class="md-head">
+      <h2 class="md-title">MELTY BLOOD <span>Re·ACT Final Tuned</span></h2>
+      <button type="button" class="md-close" id="mob-drawer-close" aria-label="Close menu">✕</button>
+    </div>
+    <div class="md-metrics">
+      <div class="md-metric"><span>Frame rate</span><strong id="md-status">Loading…</strong></div>
+      <div class="md-metric"><span>Input</span><strong id="md-lat-input">—</strong></div>
+      <div class="md-metric"><span>Sound</span><strong id="md-lat-sound">off</strong></div>
+    </div>
+    <div class="md-actions">
+      <button type="button" id="md-guide">Guide</button>
+      <button type="button" id="md-settings">Settings</button>
+      <button type="button" id="md-controls">Controls</button>
+      <button type="button" id="md-music">Music</button>
+      <button type="button" id="md-fullscreen" hidden>Full screen</button>
+      <button type="button" id="md-sound" class="span2" hidden>Enable sound</button>
+    </div>
+    <p class="md-keys">In the menus <span class="mb-btn a">A</span> confirms and <span class="mb-btn b">B</span> goes back. The game waits while this menu is open.</p>
+    <p class="md-ios-hint" id="md-ios-hint" hidden>Tip: tap Share → Add to Home Screen on iPhone for full-screen play.</p>
+    <section class="md-sec" aria-label="Touch control preferences">
+      <h3>Touch Controls</h3>
+      <div class="md-row">
+        <span>Left thumb</span>
+        <div class="md-seg" role="group" aria-label="Left thumb style">
+          <button type="button" data-tc-mode="dpad" aria-pressed="true">D-Pad</button>
+          <button type="button" data-tc-mode="stick" aria-pressed="false">Stick</button>
+        </div>
+      </div>
+      <div class="md-row">
+        <span>Macros</span>
+        <div class="md-seg" role="group" aria-label="Macro buttons">
+          <button type="button" data-tc-macros="all" aria-pressed="true">All</button>
+          <button type="button" data-tc-macros="dash" aria-pressed="false">Dash</button>
+          <button type="button" data-tc-macros="none" aria-pressed="false">Off</button>
+        </div>
+      </div>
+      <div class="md-row">
+        <span>On-screen pad</span>
+        <div class="md-seg" role="group" aria-label="On-screen pad visibility">
+          <button type="button" data-tc-vis="auto" aria-pressed="true">Auto</button>
+          <button type="button" data-tc-vis="on" aria-pressed="false">Show</button>
+          <button type="button" data-tc-vis="off" aria-pressed="false">Hide</button>
+        </div>
+      </div>
+      <p class="md-pad-note" id="md-pad-note" hidden>Controller detected — touch controls hidden in Auto mode.</p>
+      <label class="md-row">
+        <span>Button size</span>
+        <input type="range" class="md-slider" id="md-tc-scale" min="0.85" max="1.2" step="0.05" value="1">
+      </label>
+      <label class="md-row">
+        <span>Opacity</span>
+        <input type="range" class="md-slider" id="md-tc-opacity" min="0.45" max="1" step="0.05" value="0.9">
+      </label>
+      <label class="md-row" id="md-tc-haptics-row">
+        <span>Haptic feedback</span>
+        <input type="checkbox" id="md-tc-haptics" checked>
+      </label>
+    </section>
+    <details class="md-basics">
+      <summary>Basics — Quick Move Reference</summary>
+      <dl>
+        <div><dt>Guard</dt><dd><span class="mb-tag">hold</span><span class="mb-m" aria-hidden="true"><svg class="mb-arr" style="--r:180deg"><use href="#mb-arr"/></svg></span></dd></div>
+        <div><dt>Throw</dt><dd><span class="mb-m" aria-hidden="true"><svg class="mb-arr"><use href="#mb-arr"/></svg></span><span class="mb-plus" aria-hidden="true">+</span><span class="mb-btn c">C</span></dd></div>
+        <div><dt>Dash</dt><dd><span class="mb-m tap" aria-hidden="true"><svg class="mb-arr"><use href="#mb-arr"/></svg><svg class="mb-arr"><use href="#mb-arr"/></svg></span><span class="mb-conj">or</span><span class="mb-combo"><span class="mb-btn a">A</span><span class="mb-plus">+</span><span class="mb-btn b">B</span></span></dd></div>
+        <div><dt>Shield</dt><dd><span class="mb-btn d">D</span></dd></div>
+        <div><dt>Shield counter</dt><dd><span class="mb-m" aria-hidden="true"><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:45deg"><use href="#mb-arr"/></svg><svg class="mb-arr"><use href="#mb-arr"/></svg></span><span class="mb-plus" aria-hidden="true">+</span><span class="mb-btn d">D</span></dd></div>
+        <div><dt>EX move</dt><dd><span class="mb-tag">special</span><span class="mb-plus" aria-hidden="true">+</span><span class="mb-btn c">C</span></dd></div>
+        <div><dt>Heat</dt><dd><span class="mb-m tap" aria-hidden="true"><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg></span><span class="mb-plus" aria-hidden="true">+</span><span class="mb-btn d">D</span></dd></div>
+        <div><dt>Arc Drive</dt><dd><span class="mb-m" aria-hidden="true"><svg class="mb-arr" style="--r:180deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:135deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:90deg"><use href="#mb-arr"/></svg><svg class="mb-arr" style="--r:45deg"><use href="#mb-arr"/></svg><svg class="mb-arr"><use href="#mb-arr"/></svg></span><span class="mb-plus" aria-hidden="true">+</span><span class="mb-btn c">C</span></dd></div>
+      </dl>
+    </details>
+  </div>
+</dialog>
+</body>
+</html>

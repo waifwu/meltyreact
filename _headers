@@ -1,0 +1,9 @@
+# Immutable game archive chunks (.partNNN, .p, .mpg).
+# Scoped to /data/ReACT/* and /data/MeltyBlood/* so /data/bundle-manifest.json stays
+# revalidated and /build/* (stable .mjs/.wasm filenames across rebuilds) is never pinned.
+# If trimmed archives are ever regenerated, bump a versioned path prefix in data/.
+/data/ReACT/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/data/MeltyBlood/*
+  Cache-Control: public, max-age=31536000, immutable

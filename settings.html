@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings</title>
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:,">
+<script>
+  // on a phone, over the game: the game page says so in this page's address (lib/controls-host.js
+  // openPage). Set before the first paint; the page's module finds out for a page opened by itself.
+  if (/[?&]touch=1(?:&|$)/.test(location.search)) document.documentElement.classList.add('phone');
+</script>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  /* the game's look comes from game.css (body.mb); this is the page's own layout */
+  .choice { display: flex; flex-wrap: wrap; gap: 6px 20px; align-items: center; }
+  .choice label, label.check { display: inline-flex; gap: 6px; align-items: center; }
+  .help { font-size: .92em; margin: 6px 0 0; max-width: 72ch; }
+  .tex td, .tex th { vertical-align: middle; }
+  .tex td.c, .tex th.c { text-align: center; width: 6em; }
+  input[type=number] { width: 6em; }
+  .grid { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 10px 18px; align-items: center; }
+  .grid > label { font-style: italic; color: var(--mb-dim); }
+  .src { font-size: .9em; }
+  nav.links { display: flex; gap: 16px; flex-wrap: wrap; }
+  @media (max-width: 640px) {
+    .grid { grid-template-columns: minmax(0, 1fr); gap: 4px; } .grid > label { margin-top: 8px; }
+    .tex th:nth-child(2), .tex td:nth-child(2) { display: table-cell !important; } /* style.css hides column 2 of tables */
+  }
+</style>
+<script type="module" src="settings.js"></script>
+</head>
+<body class="mb">
+<header>
+  <div class="mb-headrow">
+    <h1>Settings</h1>
+    <nav class="links" id="nav"><a href="./play.html">Play</a></nav>
+  </div>
+  <p class="lede">What the original's <em>Startup Menu</em> set before the game started, and this browser port's own settings.
+  The game reads its choices from its own files (<code>app.cfg</code>, <code>cfg.cfg</code>) in this browser's storage,
+  so, as in the original, changes take effect the next time the game starts.</p>
+  <p id="embedded-note" class="banner" hidden>The game is <span class="desk-only">running behind this window</span><span class="phone-only">paused behind this page</span> and reads these settings only when it
+  starts. <strong>Save and restart</strong> saves them and starts the game again, which ends the match in progress.
+  <span class="desk-only"><kbd>Esc</kbd> or </span><strong>Close</strong> leaves without saving.</p>
+  <p id="running" class="banner error" hidden>The game is running in another tab. It writes its settings back while it runs and would undo changes made here: close it first, then save.</p>
+  <p id="message" class="banner" role="status" aria-live="polite" hidden></p>
+</header>
+
+<main>
+<form id="form" autocomplete="off">
+<section aria-labelledby="launcher-h">
+  <h2 id="launcher-h">Startup Menu</h2>
+  <p class="src muted" id="src-app">Reading <code>app.cfg</code>…</p>
+
+  <fieldset>
+    <legend>Video mode</legend>
+    <div class="choice">
+      <label><input type="radio" name="screenMode" value="fullscreen"> Use full screen mode</label>
+      <label><input type="radio" name="screenMode" value="windowed"> Use windowed mode</label>
+    </div>
+    <p class="help">Stored in <code>app.cfg</code> as the original does. With full screen chosen the game runs its own
+    full-screen mode (640×480 at the colour depth below). <span class="desk-only">A browser only lets a page fill the screen after a click or
+    a key press, so use the <strong>Full screen</strong> button on the game page or Alt+Enter; the button is marked when
+    the game asks for it.</span><span class="phone-only">The page then fills the screen at your first touch, in the browsers that allow it; there the
+    game's Menu has a <strong>Full screen</strong> button as well.</span> A copy that has never run starts windowed, where the original would start in full screen.</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Color depth</legend>
+    <div class="choice">
+      <label><input type="radio" name="colorDepth" value="16"> 16-bit color</label>
+      <label><input type="radio" name="colorDepth" value="32"> 32-bit color (Req. 64MB VRAM)</label>
+    </div>
+    <p class="help">The display mode the game asks for in full-screen mode. In windowed mode the game ignores it.</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Controllers</legend>
+    <p class="help">The launcher's <em>Controller 1 config</em>, <em>Controller 2 config</em> and <em>Controller defaults</em>
+    buttons (controller button assignment, stored in <code>cfg.cfg</code>) and keyboard keys are on the
+    <a href="./controls.html" id="controls-link">controls page</a>.</p>
+    <p class="help" id="controller-note"></p>
+  </fieldset>
+</section>
+
+<section aria-labelledby="detail-h">
+  <h2 id="detail-h">Detailed configuration</h2>
+  <p class="help">Colour precision of the game's textures, by group, as in the original's <em>Detailed configuration</em>
+  dialog. 16-bit textures show visible banding; 32-bit ones need more memory, which no longer matters, so the browser
+  port starts with 32-bit everywhere. 16-bit is there for the original's look.</p>
+  <div class="table-scroll">
+  <table class="tex" id="tex">
+    <thead><tr><th scope="col">Graphics</th><th scope="col" class="c">16-bit</th><th scope="col" class="c">32-bit</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  </div>
+  <fieldset>
+    <legend>Problem evasion</legend>
+    <label class="check"><input type="checkbox" id="evasion"> Problem evasion check</label>
+    <p class="help">Changes how some images are loaded and drawn: as single large (1024 × 1024) textures instead of the
+    game's usual way. The original offered it to get around graphics-driver problems. In the port it made no visible
+    difference in the scenes checked (title, menus, character select, a match). Off by default.</p>
+  </fieldset>
+  <fieldset>
+    <legend>Game speed</legend>
+    <div class="choice">
+      <label>Game speed (1-1000) <input type="number" id="gameSpeed" min="1" max="1000" step="1" required></label>
+      <span class="muted">frames per second; 60 is normal speed</span>
+    </div>
+    <p class="help">The original resets this to 60 at every start, so it had to be set again each time. This page keeps it
+    and the port enters it in the dialog at every start. Above the display's refresh rate the game still speeds up,
+    but not every frame is shown.</p>
+  </fieldset>
+  <div class="row">
+    <button type="button" id="detail-default" class="secondary">Default (as the dialog's button)</button>
+  </div>
+</section>
+
+<section aria-labelledby="host-h">
+  <h2 id="host-h">This browser</h2>
+  <p class="help">Settings of the browser port that the original had no equivalent for. They are kept in this browser,
+  apart from the game's files. The game page's URL parameters (<code>?scale=</code>, <code>?scaling=</code>, <code>?smooth=</code>,
+  <code>?sound=</code>, <code>?audioLatency=</code>, <code>?mouse=</code>) still override them.</p>
+  <div class="grid">
+    <!-- Picture size: not on a phone, where the picture always fits the screen (play.js layoutCanvas); its value is kept -->
+    <label for="scale" class="desk-only">Picture size</label>
+    <select id="scale" class="desk-only">
+      <option value="fit">Fit the window</option>
+      <option value="1">640 × 480</option>
+      <option value="2">1280 × 960</option>
+      <option value="3">1920 × 1440</option>
+      <option value="4">2560 × 1920</option>
+    </select>
+    <label for="scaling">Scaling</label>
+    <select id="scaling">
+      <option value="sharp">Sharp bilinear: even, crisp pixels at any size</option>
+      <option value="pixels">Sharp pixels (nearest neighbour; uneven unless the size is a whole multiple)</option>
+      <option value="smooth">Smooth (bilinear)</option>
+      <option value="upscale">Upscale: smooth curves, crisp edges (recommended)</option>
+    </select>
+    <label for="sound">Sound</label>
+    <span><label class="check"><input type="checkbox" id="sound"> Sound on</label></span>
+    <label for="volume">Volume</label>
+    <span><input type="range" id="volume" min="0" max="100" step="1"> <output id="volume-out" for="volume"></output>
+      <span class="muted">(on top of the game's own BGM and effects volumes)</span></span>
+    <label for="audioLatency">Audio latency</label>
+    <span><input type="number" id="audioLatency" min="10" max="500" step="5"> ms <span class="muted">(how far the sound plays behind the game; raise it if the sound crackles)</span></span>
+    <label for="mouse" class="desk-only">Mouse controls</label>
+    <span class="desk-only"><label class="check"><input type="checkbox" id="mouse"> Use mouse in menus</label> <span class="muted">(off by default; wheel moves, left click A, right click B, middle click C)</span></span>
+  </div>
+</section>
+
+<section aria-labelledby="game-h">
+  <h2 id="game-h">Set in the game</h2>
+  <p class="help">These are changed in the game's own <em>Options</em> menu (title screen), not here. Read from
+  <code>cfg.cfg</code>, which also holds your key assignments, unlocks and records.</p>
+  <p class="src muted" id="src-cfg">Reading <code>cfg.cfg</code>…</p>
+  <dl class="kv" id="game-options"></dl>
+</section>
+
+<section aria-labelledby="save-h">
+  <h2 id="save-h">Save</h2>
+  <div class="row" id="save-row">
+    <button type="submit" id="save">Save</button>
+    <button type="button" id="revert" class="secondary">Undo changes</button>
+    <button type="button" id="reset" class="danger">Reset to defaults…</button>
+  </div>
+  <p class="help">Reset puts the Startup Menu, Detailed configuration and browser settings back to what the browser port
+  starts with: the game's first start, but with 32-bit colour and textures. It keeps <code>cfg.cfg</code> (your in-game
+  options, keys, unlocks and records).</p>
+  <h3>Export and import</h3>
+  <div class="row">
+    <button type="button" id="export" class="secondary">Export settings (zip)</button>
+    <label class="filebtn secondary">Import settings (zip)&hellip;<input id="import" type="file" accept=".zip,application/zip"></label>
+  </div>
+  <p class="help">The zip holds <code>ReACT/app.cfg</code>, <code>ReACT/cfg.cfg</code> and <code>mbr-settings.json</code>
+  (this browser's settings). Importing replaces those files; <code>cfg.cfg</code> carries your progress with it.</p>
+</section>
+</form>
+</main>
+
+<dialog id="confirm">
+  <form method="dialog">
+    <p id="confirm-text"></p>
+    <div class="row end">
+      <button value="cancel" class="secondary">Cancel</button>
+      <button value="ok" id="confirm-ok" class="danger">OK</button>
+    </div>
+  </form>
+</dialog>
+</body>
+</html>

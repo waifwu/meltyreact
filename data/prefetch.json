@@ -1,0 +1,36 @@
+{
+  "about": "What the game reads after start-up and before a battle: recorded with play.html?traceReads=1 through title, main menu (with its music), VS COM and character select (frames 100-1700), plus the start and the end of the opening movie, and the jingle that plays over every battle's loading screen (10.p at 77135872: the main thread waits for it in the frame that cuts to that screen). The entries marked desktop are not fetched on phones: every character's pictures for character select (the SEL_* entries, all colours: 28 MB in one stretch of 00.p and a little of 00ft.p and 07.p, so that moving the cursor over the roster never waits for a download), and the first 256 KiB of each stage's music (what the game waits for as a battle begins; the rest of a track arrives behind it): 22 tracks. Offsets are in the original files; a negative offset counts from the end. Loaded in this order by lib/prefetch.js. The rest is fetched when the game shows that it is about to be needed (play.js musicAhead), also where the list above is not loaded (data saver): rules: when the game reads `after`, fetch `then` (entering character select, whose music is 10.p at 77922304, means a battle and its loading jingle are near); stageMusic: the offset in react/02.p at which a stage's data starts, and where that stage's music starts, recorded from scripted matches on 17 stages (the page learns the others as they are played).",
+  "entries": [
+    { "file": "react/00ft.p", "ranges": [[40151144, 1275928], [82140287, 135347], [85105699, 216173], [90152015, 243332], [98579458, 55032]] },
+    { "file": "react/04.p", "ranges": [[756, 4548], [3611725, 312198]] },
+    { "file": "react/00.p", "ranges": [[40810767, 53474], [63972624, 296343], [64728049, 181310], [65277996, 349463], [66079444, 142341], [73188298, 277770], [73916566, 167384], [84468034, 116730], [86205128, 336802], [86997843, 189532], [88490196, 473674], [90688988, 694958]] },
+    { "file": "react/07.p", "ranges": [[100280663, 4396]] },
+    { "file": "react/10.p", "ranges": [[77922304, 1066227], [77135872, 155328]] },
+    { "file": "meltyblood/mbop.mpg", "ranges": [[0, 4194304], [-262144, 262144]] },
+    { "file": "react/00.p", "ranges": [[60605929, 27440245]], "desktop": true },
+    { "file": "react/00ft.p", "ranges": [[85321872, 986794]], "desktop": true },
+    { "file": "react/07.p", "ranges": [[190585497, 110759]], "desktop": true },
+    { "file": "react/10.p", "ranges": [[40173568, 262144], [44826624, 262144], [49283072, 262144], [53280768, 262144], [57212928, 262144], [61603840, 262144], [65273856, 262144]], "desktop": true },
+    { "file": "meltyblood/data00.p", "ranges": [[12320768, 262144], [23134208, 262144], [34013184, 262144], [38862848, 262144], [43712512, 262144], [47316992, 262144], [52690944, 262144], [58195968, 262144], [63438848, 262144], [67960832, 262144], [72417280, 262144], [78053376, 262144], [81330176, 262144], [86048768, 262144], [90636288, 262144]], "desktop": true }
+  ],
+  "rules": [{"after": {"file": "react/10.p", "offset": 77922304}, "then": {"file": "react/10.p", "ranges": [[77135872, 155328]]}}],
+  "stageMusic": {
+    "react/02.p@22513328": ["meltyblood/data00.p", 23134208],
+    "react/02.p@31482296": ["meltyblood/data00.p", 34013184],
+    "react/02.p@40117760": ["meltyblood/data00.p", 38862848],
+    "react/02.p@61228612": ["meltyblood/data00.p", 43712512],
+    "react/02.p@73083420": ["meltyblood/data00.p", 47316992],
+    "react/02.p@85423484": ["meltyblood/data00.p", 52690944],
+    "react/02.p@104501096": ["meltyblood/data00.p", 58195968],
+    "react/02.p@116404048": ["meltyblood/data00.p", 63438848],
+    "react/02.p@130829276": ["meltyblood/data00.p", 67960832],
+    "react/02.p@139703028": ["meltyblood/data00.p", 72417280],
+    "react/02.p@150465712": ["meltyblood/data00.p", 78053376],
+    "react/02.p@159404768": ["meltyblood/data00.p", 81330176],
+    "react/02.p@171650912": ["meltyblood/data00.p", 86048768],
+    "react/02.p@181803720": ["react/10.p", 40173568],
+    "react/02.p@191197856": ["react/10.p", 44826624],
+    "react/02.p@201924492": ["react/10.p", 49283072],
+    "react/02.p@276781584": ["react/10.p", 65273856]
+  }
+}
