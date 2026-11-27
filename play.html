@@ -224,6 +224,18 @@
   @keyframes mb-call { 50% { text-shadow: 0 0 9px var(--mb-glow), 0 0 2px #000; border-color: #ff8796; } }
   @media (prefers-reduced-motion: reduce) { #sound.waiting { animation: none; text-shadow: 0 0 7px var(--mb-glow), 0 0 2px #000; } }
 
+  /* bottom-right GitHub button in the right strip, balancing Information on the left */
+  .gh-link { margin-top: auto; display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 10px 7px;
+    font: italic 1rem/1.25 var(--mb-serif); color: var(--mb-dim); text-decoration: none; cursor: pointer;
+    background: linear-gradient(#0d0204, #000); border: 2px solid var(--mb-edge); border-radius: 6px;
+    box-shadow: 0 0 0 1px #000, 0 4px 16px rgb(0 0 0 / .45); text-shadow: 0 1px 0 #000;
+    transition: color .12s, text-shadow .12s, background-color .12s; }
+  .gh-link svg { width: 17px; height: 17px; flex: none; fill: currentColor; filter: drop-shadow(0 1px 1px #000); }
+  .gh-link .gh-arrow { margin-left: auto; font-style: normal; font-size: .85rem; opacity: .7; transition: opacity .12s, transform .12s; }
+  .gh-link:hover, .gh-link:focus-visible { color: #fff; outline: none; text-shadow: 0 0 7px var(--mb-glow), 0 0 2px #000;
+    background: linear-gradient(90deg, rgb(160 12 32 / .7), rgb(12 2 4 / .95) 75%); }
+  .gh-link:hover .gh-arrow, .gh-link:focus-visible .gh-arrow { opacity: 1; transform: translate(1px, -1px); }
+
   /* tighten side strip padding slightly on smaller desktop windows so panels stay crisp */
   @media (max-width: 900px) {
     .side { padding: 12px 8px; }
@@ -625,6 +637,11 @@
       <h2 class="tab">Player 2</h2>
       <div class="keys-body" data-player="2"></div>
     </section>
+    <a class="gh-link" id="github-link" href="https://github.com/waifwu/meltyreact" target="_blank" rel="noopener noreferrer" aria-label="View on GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span>GitHub</span>
+      <span class="gh-arrow" aria-hidden="true">↗</span>
+    </a>
   </div>
 </aside>
 <dialog id="mobile-drawer" aria-label="Game menu">
